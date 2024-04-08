@@ -1,3 +1,5 @@
 # Table of contents
 
-* [Page](README.md)
+* [Bluetooth Plugin for Rainmeter](README.md)
+* [Options](options.md)
+* [Bangs](bangs.md)
