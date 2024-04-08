@@ -14,7 +14,7 @@ _TODO_
 
 ## Documentation
 
-[https://66bunz.github.io/Rainmeter-Bluetooth-Plugin/](https://66bunz.github.io/Rainmeter-Bluetooth-Plugin/)
+[https://bunz66.gitbook.io/rainmeter-bluetooth-plugin](https://bunz66.gitbook.io/rainmeter-bluetooth-plugin)
 
 ## Basic Usage
 
