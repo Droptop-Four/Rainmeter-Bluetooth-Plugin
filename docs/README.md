@@ -60,19 +60,20 @@ For a complete example, check out the [example skin](https://github.com/66bunz/R
 
 Those are the features I'd like to implement/have in a bluetooth plugin:
 
-- [x] Scan & list Bluetooth devices
-- [ ] Scan & list BluetoothLE devices
-- [ ] Display Device Battery
-- [ ] Connect to devices
-- [ ] Disconnect devices
-- [ ] Enable/Disable/Toggle Bluetooth adapter
+* [x] Enable/Disable/Toggle Bluetooth adapter
+* [x] Scan & list Bluetooth devices
+* [ ] Return the Bluetooth adapter status
+* [ ] Scan & list BluetoothLE devices
+* [ ] Display Device Battery
+* [ ] Connect to devices
+* [ ] Disconnect devices
 
 ## Contributing
 
-If you want to help you are encouraged to for the repo and do your changes, then open a pull request! <mark style="color:red;">**Any help is appreciated!**</mark>
+If you want to help you are encouraged to fork the repo and do your changes, then open a pull request! <mark style="color:red;">**Any help is appreciated!**</mark>
 
 If you want to suggest a feature or report a bug, please open an issue!
 
 ## License
 
-This project is licensed under the GPL-3.0 License - see the [LICENSE](../LICENSE) file for details.
+This project is licensed under the GPL-3.0 License - see the [LICENSE](../LICENSE/) file for details.

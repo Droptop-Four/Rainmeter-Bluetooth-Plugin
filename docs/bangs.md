@@ -1,12 +1,12 @@
 ---
-description: Possible bangs to be used
+description: Possible section variables that can be used
 ---
 
-# Bangs
+# Section Variables
 
-## AvailableDevices()
+## \[\&BluetoothMeasure:AvailableDevices()]
 
-This bang returns the list of devices in a string.
+Returns the list of devices in a string.
 
 {% hint style="info" %}
 Example:\
@@ -17,3 +17,11 @@ Every device is separated by `;`, and evey item of a device is separated by `|`.
 
 It's useful for example to be used in a lua script as in the [example skin](https://github.com/66Bunz/Rainmeter-Bluetooth-Plugin/tree/main/Bluetooth-Example-Skin).
 
+## \[\&BluetoothMeasure:BluetoothStatus()]
+
+Returns the status of the Bluetooth adapter.
+
+{% hint style="info" %}
+* <mark style="color:red;">`0`</mark> if the Bluetooth adapter is <mark style="color:red;">OFF</mark>
+* <mark style="color:green;">`1`</mark> if the Bluetooth adapter is <mark style="color:green;">ON</mark>
+{% endhint %}

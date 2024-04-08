@@ -2,4 +2,5 @@
 
 * [Bluetooth Plugin for Rainmeter](README.md)
 * [Options](options.md)
-* [Bangs](bangs.md)
+* [Section Variables](bangs.md)
+* [Bangs](bangs-1.md)
