@@ -58,11 +58,14 @@ For a complete example, check out the [example skin](https://github.com/66bunz/R
 
 ## Features
 
-* [x] Scan & list Bluetooth devices
-* [ ] Scan & list BluetoothLE devices
-* [ ] Display Device Battery
-* [ ] Connect to devices
-* [ ] Disconnect devices
+Those are the features I'd like to implement/have in a bluetooth plugin:
+
+- [x] Scan & list Bluetooth devices
+- [ ] Scan & list BluetoothLE devices
+- [ ] Display Device Battery
+- [ ] Connect to devices
+- [ ] Disconnect devices
+- [ ] Enable/Disable/Toggle Bluetooth adapter
 
 ## Contributing
 
