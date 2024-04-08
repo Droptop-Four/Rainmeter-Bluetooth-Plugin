@@ -52,7 +52,6 @@
 *_REMOTE_*.txt
 
 ### VisualStudioCode ###
-.vscode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
