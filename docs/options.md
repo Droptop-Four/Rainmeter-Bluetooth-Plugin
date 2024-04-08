@@ -47,7 +47,7 @@ DevicesUpdatedAction=[!Log "Bang1" Debug][!Log "Bang2" Debug]
 ## DevicesVariable
 
 {% hint style="warning" %}
-Both this and [#variablesfile](options.md#variablesfile "mention") need to be defined
+If this is defined, also [#variablesfile](options.md#variablesfile "mention") needs to be defined
 {% endhint %}
 
 The name of the variable that you want the plugin to update when&#x20;
@@ -55,7 +55,7 @@ The name of the variable that you want the plugin to update when&#x20;
 ## VariablesFile
 
 {% hint style="warning" %}
-Both this and [#devicesvariable](options.md#devicesvariable "mention") need to be defined
+If this is defined, also [#devicesvariable](options.md#devicesvariable "mention") needs to be defined
 {% endhint %}
 
 The name of the file that contains the [#devicesvariable](options.md#devicesvariable "mention").
