@@ -14,8 +14,7 @@ Else, you can download the zip package from the latest [release](https://github.
 
 ## Documentation
 
-[https://66bunz.github.io/Rainmeter-Bluetooth-Plugin/](https://66bunz.github.io/Rainmeter-Bluetooth-Plugin/)
-
+[https://bunz66.gitbook.io/rainmeter-bluetooth-plugin](https://bunz66.gitbook.io/rainmeter-bluetooth-plugin)
 ## Basic Usage
 
 > **NOTE:** Since this plugin is still a WIP, the usage is subject to change.
