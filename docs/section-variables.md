@@ -8,9 +8,7 @@ description: Possible section variables that can be used
 
 Returns the list of devices in a string.
 
-{% hint style="info" %}
 `device_name|connected[0,1]|Authenticated[0,1]|Remembered[0,1]|datetime_last_seen|datetime_last_used;`
-{% endhint %}
 
 Every device is separated by `;`, and evey item of a device is separated by `|`.
 
