@@ -1,27 +1,71 @@
 ---
-description: Possible section variables that can be used
+description: Possible Bangs that can be used
 ---
 
-# Section Variables
+# Bangs
 
-## \[\&BluetoothMeasure:AvailableDevices()]
+## UpdateBluetoothStatus
 
-Returns the list of devices in a string.
+Manually updates the status of the Bluetooth adapter. The status can be retrieved with [#and-bluetoothmeasure-bluetoothstatus](section-variables.md#and-bluetoothmeasure-bluetoothstatus "mention").
 
-{% hint style="info" %}
-Example:\
-`device_name|connected[0,1]|Authenticated[0,1]|Remembered[0,1]|datetime_last_seen|datetime_last_used;`
+{% hint style="warning" %}
+Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 {% endhint %}
 
-Every device is separated by `;`, and evey item of a device is separated by `|`.
+{% code title="Example Bang" %}
+```ini
+[!CommandMeasure "BluetoothMeasure" "UpdateBluetoothStatus"]
+```
+{% endcode %}
 
-It's useful for example to be used in a lua script as in the [example skin](https://github.com/66Bunz/Rainmeter-Bluetooth-Plugin/tree/main/Bluetooth-Example-Skin).
+## DisableBluetooth
 
-## \[\&BluetoothMeasure:BluetoothStatus()]
+Disables the Bluetooth adapter.
 
-Returns the status of the Bluetooth adapter.
-
-{% hint style="info" %}
-* <mark style="color:red;">`0`</mark> if the Bluetooth adapter is <mark style="color:red;">OFF</mark>
-* <mark style="color:green;">`1`</mark> if the Bluetooth adapter is <mark style="color:green;">ON</mark>
+{% hint style="warning" %}
+Available if the [#type](options.md#type "mention") is set to `2` or `0`.
 {% endhint %}
+
+{% code title="Example Bang" %}
+```ini
+[!CommandMeasure "BluetoothMeasure" "DisableBluetooth"]
+```
+{% endcode %}
+
+## EnableBluetooth
+
+Enables the Bluetooth adapter.
+
+{% hint style="warning" %}
+Available if the [#type](options.md#type "mention") is set to `2` or `0`.
+{% endhint %}
+
+{% code title="Example Bang" %}
+```ini
+[!CommandMeasure "BluetoothMeasure" "EnableBluetooth"]
+```
+{% endcode %}
+
+## ToggleBluetooth
+
+Toggles the Bluetooth adapter.
+
+{% code title="Example Bang" %}
+```ini
+[!CommandMeasure "BluetoothMeasure" "ToggleBluetooth"]
+```
+{% endcode %}
+
+## UpdateDevices
+
+Manually starts the update of devices that are stored inside the plugin. They can be retrieved with [#and-bluetoothmeasure-availabledevices](section-variables.md#and-bluetoothmeasure-availabledevices "mention").
+
+{% hint style="warning" %}
+Available if the [#type](options.md#type "mention") is set to `2` or `0`.
+{% endhint %}
+
+{% code title="Example Bang" %}
+```ini
+[!CommandMeasure "BluetoothMeasure" "UpdateDevices"]
+```
+{% endcode %}

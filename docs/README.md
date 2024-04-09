@@ -62,7 +62,7 @@ Those are the features I'd like to implement/have in a bluetooth plugin:
 
 * [x] Enable/Disable/Toggle Bluetooth adapter
 * [x] Scan & list Bluetooth devices
-* [ ] Return the Bluetooth adapter status
+* [x] Return the Bluetooth adapter status
 * [ ] Scan & list BluetoothLE devices
 * [ ] Display Device Battery
 * [ ] Connect to devices
