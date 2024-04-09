@@ -4,4 +4,8 @@
 
 class Measure;
 
-void UpdateDevices(Measure* measure);
+void updateBluetoothStatus(Measure* measure);
+void updateDevices(Measure* measure);
+void disableBluetooth(Measure* measure);
+void enableBluetooth(Measure* measure);
+void toggleBluetooth(Measure* measure);

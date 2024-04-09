@@ -1,23 +1,38 @@
+#pragma comment(lib, "Bthprops.lib")
+
 #include "Plugin.h"
 #include "Measure.h"
 #include <bluetoothapis.h>
-
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Devices.Radios.h>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <string>
-#include <iostream>
+#include <thread>
+#include <vector>
 #include <fstream>
 #include <sstream>
-#include <vector>
-#include <thread>
-
+#include <iostream>
 
 using namespace std;
+using namespace winrt;
+using namespace Windows::Foundation;
+using namespace Windows::Devices::Radios;
+using namespace Windows::Foundation::Collections;
 
 
 HINSTANCE MODULE_INSTANCE;
 
+
+// ------------ [Global Variables] ------------
+#pragma region GlobalVariables
+
 static wstring availableDevices;	// Formatted string of all devices ("device_name|connected[0,1]|Authenticated[0,1]|Remembered[0,1]|datetime_last_seen|datetime_last_used;")
 static wstring devicesBuffer;		// Buffer to save devices during list updates to avoid getting back partial lists
 static string fileBufferString;		// Buffer to save devices during file updates to avoid having an empty file between updates
+static wstring bluetoothStatus;		// String to hold the status of the Bluetooth adapter
+
+#pragma endregion
+
 
 /*
 * Entry point to Dll, run once at dll load
@@ -39,6 +54,10 @@ BOOL WINAPI DllMain(
 	return TRUE;
 }
 
+
+// ------------ [Plugin Functions] ------------
+#pragma region PluginFunctions
+
 /*
 * Called once, at skin load or refresh
 * Read any options that need to be constant here
@@ -56,9 +75,6 @@ PLUGIN_EXPORT void Initialize(void** data, void* rm) {
 */
 PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue) {
 	Measure* measure = (Measure*)data;
-	RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Reloading");
-	UpdateDevices(measure);
-	measure->Execute(measure->devicesUpdatedAction.c_str());
 }
 
 /*
@@ -67,14 +83,33 @@ PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue) {
 */
 PLUGIN_EXPORT double Update(void* data) {
 	Measure* measure = (Measure*)data;
-	RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating");
-	UpdateDevices(measure);
+	if (measure->pluginType == 0) {			// Updates the Bluetooth status and Bluetooth devices
+		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating status & devices");
+		updateDevices(measure);
+		updateBluetoothStatus(measure);
+	}
+	else if (measure->pluginType == 1) {	// Only updates the Bluetooth status
+		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating status");
+		updateBluetoothStatus(measure);
+	}
+	else if (measure->pluginType == 2) {	// Only updates the Bluetooth devices
+		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating devices");
+		updateDevices(measure);
+	}
+	else {
+		RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid PluginType");
+	}
+	measure->Execute(measure->updateAction.c_str());
+
+	if (measure->pluginType == 1) {
+		double status = _wtof(bluetoothStatus.c_str());
+		return status;
+	}
 	return 0.0;
 }
 
-
 /*
-* Called everytime a [MeasureThisPlugin] is resolved
+* Called every time a [MeasureThisPlugin] is resolved
 * DO NOT do any lengthy operations here, use Update for that
 * Should only be used if you want the string value to be different than the numeric value
 */
@@ -84,6 +119,58 @@ PLUGIN_EXPORT double Update(void* data) {
 	return nullptr;
 }*/
 
+
+PLUGIN_EXPORT void ExecuteBang(void* data, LPCWSTR args) {
+	Measure* measure = (Measure*)data;
+	if (measure->pluginType == 2) {
+		if (_wcsicmp(args, L"DisableBluetooth") == 0) {
+			disableBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"EnableBluetooth") == 0) {
+			enableBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"ToggleBluetooth") == 0) {
+			toggleBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"UpdateDevices") == 0) {
+			updateDevices(measure);
+		}
+		else {
+			RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid bang: %s for selected plugin Type %s", args, measure->pluginType);
+		}
+	}
+	else if (measure->pluginType == 1) {
+		if (_wcsicmp(args, L"UpdateBluetoothStatus") == 0) {
+			updateBluetoothStatus(measure);
+		}
+		else {
+			RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid bang: %s for selected plugin Type %s", args, measure->pluginType);
+		}
+	}
+	else if (measure->pluginType == 0) {
+		if (_wcsicmp(args, L"DisableBluetooth") == 0) {
+			disableBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"EnableBluetooth") == 0) {
+			enableBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"ToggleBluetooth") == 0) {
+			toggleBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"UpdateDevices") == 0) {
+			updateDevices(measure);
+		}
+		else if (_wcsicmp(args, L"UpdateBluetoothStatus") == 0) {
+			updateBluetoothStatus(measure);
+		}
+		else {
+			RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid bang: %s", args);
+		}
+	}
+	else {
+		RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid PluginType");
+	}
+}
 
 /*
 * Called once, at skin unload (a skin is unloaded when you Refresh it)
@@ -96,14 +183,57 @@ PLUGIN_EXPORT void Finalize(void* data) {
 	devicesBuffer.clear();
 }
 
+#pragma endregion
+
+
+// ------------ [Section Variables] ------------
+#pragma region SectionVariables
 
 /*
-* Can be called with a Bang, to get the most updated list of devices
+* Can be called as a section variable, to get the most updated list of devices
 */
 PLUGIN_EXPORT LPCWSTR AvailableDevices(void* data, const int argc, WCHAR* argv[]) {
 	return availableDevices.c_str();
 }
 
+
+/*
+* Can be called as a section variable, to get the status of the Bluetooth adapter
+*/
+PLUGIN_EXPORT LPCWSTR BluetoothStatus(void* data, const int argc, WCHAR* argv[]) {
+	Measure* measure = (Measure*)data;
+	return bluetoothStatus.c_str();
+}
+
+#pragma endregion
+
+
+// ------------ [Internal Functions] ------------
+#pragma region InternalFunctions
+
+/*
+* Threaded function that updates the status of the Bluetooth adapter
+*/
+void updateBluetoothStatus(Measure* measure) {
+	std::thread updateBluetoothStatusThread([measure]() {
+		init_apartment();
+		Radio::RequestAccessAsync().get();
+		IVectorView<Radio> radios = Radio::GetRadiosAsync().get();
+		for (Radio const& radio : radios) {
+			if (radio.Kind() == RadioKind::Bluetooth) {
+				if (radio.State() == RadioState::On) {
+					bluetoothStatus = L"1";
+				}
+				else {
+					bluetoothStatus = L"0";
+				}
+				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updated Bluetooth Status");
+			}
+		}
+		});
+
+	updateBluetoothStatusThread.detach();
+}
 
 /*
 * Threaded function that updates the bluetooth devices seen in every bluetooth interface on the machine.
@@ -115,7 +245,7 @@ PLUGIN_EXPORT LPCWSTR AvailableDevices(void* data, const int argc, WCHAR* argv[]
 *  - when the device was last seen
 *  - when the device was last used
 */
-void UpdateDevices(Measure* measure) {
+void updateDevices(Measure* measure) {
 	std::thread updateThread([measure]() {
 
 		devicesBuffer.clear();
@@ -206,7 +336,6 @@ void UpdateDevices(Measure* measure) {
 			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating DevicesVariable");
 			wstring setVariableBang = L"[!SetVariable " + measure->devicesVariable + L" \"" + availableDevices.c_str() + L"\"]";
 			RmExecute(measure->skin, setVariableBang.c_str());
-
 			wstring writeVariableBang = L"[!WriteKeyValue Variables " + measure->devicesVariable + L" \"" + availableDevices.c_str() + L"\" \"" + measure->variablesFile + L"\"]";
 			RmExecute(measure->skin, writeVariableBang.c_str());
 			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] DevicesVariable updated");
@@ -215,3 +344,76 @@ void UpdateDevices(Measure* measure) {
 
 	updateThread.detach();
 }
+
+/*
+* Function to disable the Bluetooth adapter
+*/
+void disableBluetooth(Measure* measure) {
+	std::thread disableBluetoothThread([measure]() {
+		init_apartment();
+		Radio::RequestAccessAsync().get();
+		IVectorView<Radio> radios = Radio::GetRadiosAsync().get();
+		for (Radio const& radio : radios) {
+			if (radio.Kind() == RadioKind::Bluetooth) {
+				radio.SetStateAsync(RadioState::Off).get();
+				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Disabled Bluetooth adapter");
+				bluetoothStatus = L"0";
+				break;
+			}
+		}
+		});
+
+	disableBluetoothThread.detach();
+}
+
+/*
+* Function to enable the Bluetooth adapter
+*/
+void enableBluetooth(Measure* measure) {
+	std::thread enableBluetoothThread([measure]() {
+		init_apartment();
+		Radio::RequestAccessAsync().get();
+		IVectorView<Radio> radios = Radio::GetRadiosAsync().get();
+		for (Radio const& radio : radios) {
+			if (radio.Kind() == RadioKind::Bluetooth) {
+				radio.SetStateAsync(RadioState::On).get();
+				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Disabled Bluetooth adapter");
+				bluetoothStatus = L"1";
+				break;
+			}
+		}
+		});
+
+	enableBluetoothThread.detach();
+}
+
+/*
+* Function to toggle ON/OFF the Bluetooth adapter
+*/
+void toggleBluetooth(Measure* measure) {
+	std::thread toggleBluetoothThread([measure]() {
+		init_apartment();
+		Radio::RequestAccessAsync().get();
+		IVectorView<Radio> radios = Radio::GetRadiosAsync().get();
+		for (Radio const& radio : radios) {
+			if (radio.Kind() == RadioKind::Bluetooth) {
+				RadioState currentState = radio.State();
+				if (currentState == RadioState::On) {
+					radio.SetStateAsync(RadioState::Off).get();
+					RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Disabled Bluetooth adapter");
+					bluetoothStatus = L"0";
+				}
+				else if (currentState == RadioState::Off) {
+					radio.SetStateAsync(RadioState::On).get();
+					RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Enabled Bluetooth adapter");
+					bluetoothStatus = L"1";
+				}
+				break;
+			}
+		}
+		});
+
+	toggleBluetoothThread.detach();
+}
+
+#pragma endregion

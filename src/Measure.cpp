@@ -12,8 +12,9 @@ Measure::~Measure() {
 }
 
 void Measure::Initialize() {
+	pluginType = RmReadInt(rm, L"Type", 0);
+	updateAction = RmReadString(rm, L"UpdateAction", L"", FALSE);
 	outputPath = RmReadString(rm, L"OutputPath", L"", FALSE);
-	devicesUpdatedAction = RmReadString(rm, L"DevicesUpdatedAction", L"", FALSE);
 	devicesVariable = RmReadString(rm, L"DevicesVariable", L"", FALSE);
 	variablesFile = RmReadString(rm, L"VariablesFile", L"", FALSE);
 }

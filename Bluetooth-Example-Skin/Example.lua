@@ -6,22 +6,36 @@ function Initialize()
     SKIN:Bang("!SetVariable", "PageDevice2", 2)
 end
 
+function RefreshStatus()
+    local Status = tonumber(SKIN:ReplaceVariables('[&BluetoothDevicesMeasure:BluetoothStatus()]'))
+    local OldStatus = tonumber(SKIN:GetVariable('Status'))
+
+    if (OldStatus ~= Status) then
+        SKIN:Bang("!SetVariable", "Status", Status)
+        SKIN:Bang("!WriteKeyValue", "Variables", "Status", string.format('%s', Status), "Example.ini")
+    end
+end
+
 function Refresh()
-    local DevicesString = SKIN:ReplaceVariables('[&BluetoothMeasure:AvailableDevices()]')
+    local DevicesString = SKIN:ReplaceVariables('[&BluetoothDevicesMeasure:AvailableDevices()]')
 
-    SKIN:Bang("!SetVariable", "Devices", DevicesString)
-    SKIN:Bang("!WriteKeyValue", "Variables", "Devices", string.format('%s', DevicesString), "Example.ini")
+    local OldDevicesString = SKIN:GetVariable('Devices')
 
-    _Populate(1, 2)
+    if ((OldDevicesString ~= DevicesString) and (DevicesString ~= "")) then
+        SKIN:Bang("!SetVariable", "Devices", DevicesString)
+        SKIN:Bang("!WriteKeyValue", "Variables", "Devices", string.format('%s', DevicesString), "Example.ini")
 
-    SKIN:Bang("!SetVariable", "PageNumber", 0)
-    SKIN:Bang("!SetVariable", "PageDevice1", 1)
-    SKIN:Bang("!SetVariable", "PageDevice2", 2)
+        _Populate(1, 2)
 
-    local Devices = _DivideDevices(DevicesString)
+        SKIN:Bang("!SetVariable", "PageNumber", 0)
+        SKIN:Bang("!SetVariable", "PageDevice1", 1)
+        SKIN:Bang("!SetVariable", "PageDevice2", 2)
 
-    SKIN:Bang("!SetVariable", "DevicesNumber", #Devices)
-    SKIN:Bang("!WriteKeyValue", "Variables", "DevicesNumber", string.format('%s', #Devices), "Example.ini")
+        local Devices = _DivideDevices(DevicesString)
+
+        SKIN:Bang("!SetVariable", "DevicesNumber", #Devices)
+        SKIN:Bang("!WriteKeyValue", "Variables", "DevicesNumber", string.format('%s', #Devices), "Example.ini")
+    end
 end
 
 function PageDown()
@@ -52,6 +66,8 @@ function PageUp()
         _Populate(PageDevice1, PageDevice2)
     end
 end
+
+---- [Private functions] ----
 
 function _Populate(PageDevice1, PageDevice2)
     local DevicesStr = SKIN:GetVariable('Devices')

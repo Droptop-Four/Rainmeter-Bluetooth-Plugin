@@ -33,7 +33,7 @@ This is an example of how you can use the plugin in a skin:
 [Bluetooth]
 Measure=Plugin
 Plugin=Bluetooth
-UpdateDivider=10    ; Keep a relatively high value, to avoid spamming the plugin with update requests that cannot terminate
+UpdateDivider=20    ; Keep a relatively high value, to avoid spamming the plugin with update requests that cannot terminate
 DevicesUpdatedAction=[!CommandMeasure LuaScript "Refresh()"]
 
 [LuaScript]
@@ -59,16 +59,17 @@ For a complete example, check out the [example skin](https://github.com/66bunz/R
 
 Those are the features I'd like to implement/have in a bluetooth plugin:
 
+- [x] Enable/Disable/Toggle Bluetooth adapter
 - [x] Scan & list Bluetooth devices
+- [x] Return the Bluetooth adapter status
 - [ ] Scan & list BluetoothLE devices
 - [ ] Display Device Battery
 - [ ] Connect to devices
 - [ ] Disconnect devices
-- [ ] Enable/Disable/Toggle Bluetooth adapter
 
 ## Contributing
 
-If you want to help you are encouraged to for the repo and do your changes, then open a pull request! **Any help is appreciated!**
+If you want to help you are encouraged to fork the repo and do your changes, then open a pull request! **Any help is appreciated!**
 
 If you want to suggest a feature or report a bug, please open an issue!
 

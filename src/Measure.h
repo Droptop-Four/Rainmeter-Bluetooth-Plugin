@@ -8,8 +8,9 @@ public:
 	void* rm;
 	void* skin;
 
+	int pluginType;
+	std::wstring updateAction;
 	std::wstring outputPath;
-	std::wstring devicesUpdatedAction;
 	std::wstring devicesVariable;
 	std::wstring variablesFile;
 
@@ -19,4 +20,3 @@ public:
 	void Initialize();
 	void Execute(LPCWSTR bang);
 };
-
