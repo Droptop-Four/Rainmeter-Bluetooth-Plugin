@@ -37,7 +37,7 @@ This is the DEFAULT `Type`
 * [#updatebluetoothstatus](bangs.md#updatebluetoothstatus "mention")
 {% endtab %}
 
-{% tab title="Type=3" %}
+{% tab title="Type=2" %}
 **Description:** `Get/Update the Bluetooth devices`
 
 **Plugin Measure:** `Returns 0`
