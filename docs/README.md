@@ -4,9 +4,9 @@ This plugin is still a WIP (Work In Progress) and it doesn't include all the fea
 
 ## Installation
 
-Download the latest example rmskin from the [releases](https://github.com/66bunz/Rainmeter-Bluetooth-Plugin/releases) page and install it: the plugin will be present in the package.
+Download the latest example rmskin from the [releases](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/releases) page and install it: the plugin will be present in the package.
 
-Else, you can download the zip package from the latest [release](https://github.com/66bunz/Rainmeter-Bluetooth-Plugin/releases) and extract the dll that corresponds to the Windows architecture you are using (x32 or x64) to `%appdata%\Rainmeter\Plugins`.
+Else, you can download the zip package from the latest [release](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/releases) and extract the dll that corresponds to the Windows architecture you are using (x32 or x64) to `%appdata%\Rainmeter\Plugins`.
 
 ### Requirements
 
@@ -14,7 +14,7 @@ _TODO_
 
 ## Documentation
 
-[https://bunz66.gitbook.io/rainmeter-bluetooth-plugin](https://bunz66.gitbook.io/rainmeter-bluetooth-plugin)
+[https://droptop.gitbook.io/rainmeter-bluetooth-plugin](https://droptop.gitbook.io/rainmeter-bluetooth-plugin)
 
 ## Basic Usage
 
@@ -54,7 +54,7 @@ function Refresh()
 end
 ```
 
-For a complete example, check out the [example skin](https://github.com/66bunz/Rainmeter-Bluetooth-Plugin/tree/main/Bluetooth-Eample-Skin).
+For a complete example, check out the [example skin](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/tree/main/Bluetooth-Eample-Skin).
 
 ## Features
 
