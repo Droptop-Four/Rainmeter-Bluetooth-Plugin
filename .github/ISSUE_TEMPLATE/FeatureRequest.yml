@@ -1,0 +1,19 @@
+name: Feature Request
+description: Suggest an idea for this project.
+title: "[Suggestion]: "
+labels: ["feature-request", "pending"]
+projects: ["Droptop-Four/Rainmeter-Bluetooth-Plugin"]
+assignees:
+  - 66Bunz
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+  - type: textarea
+    id: what-you-want
+    attributes:
+      label: What do you want?
+      placeholder: "Tell us what you'd like to see!"
+    validations:
+      required: true
