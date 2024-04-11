@@ -3,7 +3,7 @@ description: File a bug report.
 title: "[BUG]: "
 labels: ["bug", "triage"]
 projects: ["Droptop-Four/Rainmeter-Bluetooth-Plugin"]
-assignes:
+assignees:
   - 66Bunz
 body:
   - type: markdown
