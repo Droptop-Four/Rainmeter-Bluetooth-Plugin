@@ -58,7 +58,7 @@ For a complete example, check out the [example skin](https://github.com/Droptop-
 
 ## Features
 
-Those are the features I'd like to implement/have in a bluetooth plugin:
+Those are the features we'd like to implement/have in a bluetooth plugin:
 
 * [x] Enable/Disable/Toggle Bluetooth adapter
 * [x] Scan & list Bluetooth devices
