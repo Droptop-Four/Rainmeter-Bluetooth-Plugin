@@ -18,7 +18,7 @@ This is the DEFAULT `Type`
 
 **Plugin Measure:** `Returns 0`
 
-**Available Bangs:**&#x20;
+**Available Bangs:**
 
 * [#updatebluetoothstatus](bangs.md#updatebluetoothstatus "mention")
 * [#disablebluetooth](bangs.md#disablebluetooth "mention")
@@ -32,8 +32,11 @@ This is the DEFAULT `Type`
 
 **Plugin Measure:** Returns the Bluetooth Status
 
-**Available Bangs:**&#x20;
+**Available Bangs:**
 
+* [#disablebluetooth](bangs.md#disablebluetooth "mention")
+* [#enablebluetooth](bangs.md#enablebluetooth "mention")
+* [#togglebluetooth](bangs.md#togglebluetooth "mention")
 * [#updatebluetoothstatus](bangs.md#updatebluetoothstatus "mention")
 {% endtab %}
 
@@ -42,11 +45,8 @@ This is the DEFAULT `Type`
 
 **Plugin Measure:** `Returns 0`
 
-**Available Bangs:**&#x20;
+**Available Bangs:**
 
-* [#disablebluetooth](bangs.md#disablebluetooth "mention")
-* [#enablebluetooth](bangs.md#enablebluetooth "mention")
-* [#togglebluetooth](bangs.md#togglebluetooth "mention")
 * [#updatedevices](bangs.md#updatedevices "mention")
 {% endtab %}
 {% endtabs %}
@@ -104,7 +104,7 @@ This example saves the list of devices in a file in `@Resources/output.txt`.
 If this is defined, also [#variablesfile](options.md#variablesfile "mention") needs to be defined
 {% endhint %}
 
-The name of the variable that you want the plugin to update when&#x20;
+The name of the variable that you want the plugin to update when
 
 ## VariablesFile
 
@@ -126,4 +126,3 @@ DevicesVariable=Variable1
 VariablesFile=#CURRENTFILE#
 ```
 {% endcode %}
-
