@@ -8,7 +8,7 @@
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,0,7,0
+ FILEVERSION 0,0,8,0
  PRODUCTVERSION 3,0,2,2161
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
@@ -26,7 +26,7 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "bunz"
             VALUE "FileDescription", "Bluetooth plugin for Rainmeter"
-            VALUE "FileVersion", "0.0.7.0"
+            VALUE "FileVersion", "0.0.8.0"
             VALUE "InternalName", "Bluetooth Plugin"
             VALUE "LegalCopyright", "© 2024 - Bunz"
             VALUE "OriginalFilename", "Bluetooth.dll"

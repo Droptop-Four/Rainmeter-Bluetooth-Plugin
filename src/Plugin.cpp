@@ -6,11 +6,11 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Devices.Radios.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <set>
+#include <mutex>
 #include <string>
 #include <thread>
-#include <vector>
 #include <fstream>
-#include <sstream>
 #include <iostream>
 
 using namespace std;
@@ -30,6 +30,9 @@ static wstring availableDevices;	// Formatted string of all devices ("device_nam
 static wstring devicesBuffer;		// Buffer to save devices during list updates to avoid getting back partial lists
 static string fileBufferString;		// Buffer to save devices during file updates to avoid having an empty file between updates
 static wstring bluetoothStatus;		// String to hold the status of the Bluetooth adapter
+static std::mutex bufferMutex;
+
+std::thread updateThread;
 
 #pragma endregion
 
@@ -46,7 +49,7 @@ BOOL WINAPI DllMain(
 	switch (fdwReason) {
 	case DLL_PROCESS_ATTACH:
 		MODULE_INSTANCE = hinstDLL;
-		//DisableThreadLibraryCalls(hinstDLL); // disable thread library calls, for performance improvement
+		DisableThreadLibraryCalls(hinstDLL); // disable thread library calls, for performance improvement
 	default:
 		break;
 	}
@@ -123,44 +126,54 @@ PLUGIN_EXPORT double Update(void* data) {
 PLUGIN_EXPORT void ExecuteBang(void* data, LPCWSTR args) {
 	Measure* measure = (Measure*)data;
 	if (measure->pluginType == 2) {
-		if (_wcsicmp(args, L"DisableBluetooth") == 0) {
-			disableBluetooth(measure);
-		}
-		else if (_wcsicmp(args, L"EnableBluetooth") == 0) {
-			enableBluetooth(measure);
-		}
-		else if (_wcsicmp(args, L"ToggleBluetooth") == 0) {
-			toggleBluetooth(measure);
-		}
-		else if (_wcsicmp(args, L"UpdateDevices") == 0) {
+		if (_wcsicmp(args, L"UpdateDevices") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating devices");
 			updateDevices(measure);
 		}
 		else {
-			RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid bang: %s for selected plugin Type %s", args, measure->pluginType);
+			RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid bang: %s for selected Plugin Type %s", args, measure->pluginType);
 		}
 	}
 	else if (measure->pluginType == 1) {
-		if (_wcsicmp(args, L"UpdateBluetoothStatus") == 0) {
+		if (_wcsicmp(args, L"DisableBluetooth") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Disabling Bluetooth adapter");
+			disableBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"EnableBluetooth") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Enabling Bluetooth adapter");
+			enableBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"ToggleBluetooth") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Toggling Bluetooth adapter");
+			toggleBluetooth(measure);
+		}
+		else if (_wcsicmp(args, L"UpdateBluetoothStatus") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating Bluetooth status");
 			updateBluetoothStatus(measure);
 		}
 		else {
-			RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid bang: %s for selected plugin Type %s", args, measure->pluginType);
+			RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid bang: %s for selected Plugin Type %s", args, measure->pluginType);
 		}
 	}
 	else if (measure->pluginType == 0) {
 		if (_wcsicmp(args, L"DisableBluetooth") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Disabling Bluetooth adapter");
 			disableBluetooth(measure);
 		}
 		else if (_wcsicmp(args, L"EnableBluetooth") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Enabling Bluetooth adapter");
 			enableBluetooth(measure);
 		}
 		else if (_wcsicmp(args, L"ToggleBluetooth") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Toggling Bluetooth adapter");
 			toggleBluetooth(measure);
 		}
 		else if (_wcsicmp(args, L"UpdateDevices") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating devices");
 			updateDevices(measure);
 		}
 		else if (_wcsicmp(args, L"UpdateBluetoothStatus") == 0) {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating Bluetooth status");
 			updateBluetoothStatus(measure);
 		}
 		else {
@@ -168,7 +181,7 @@ PLUGIN_EXPORT void ExecuteBang(void* data, LPCWSTR args) {
 		}
 	}
 	else {
-		RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid PluginType");
+		RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid Plugin Type");
 	}
 }
 
@@ -178,9 +191,15 @@ PLUGIN_EXPORT void ExecuteBang(void* data, LPCWSTR args) {
 */
 PLUGIN_EXPORT void Finalize(void* data) {
 	Measure* measure = (Measure*)data;
+
+	RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Unloading");
+
+	// Clean up resources
 	delete measure;
 	availableDevices.clear();
 	devicesBuffer.clear();
+	fileBufferString.clear();
+	bluetoothStatus.clear();
 }
 
 #pragma endregion
@@ -195,7 +214,6 @@ PLUGIN_EXPORT void Finalize(void* data) {
 PLUGIN_EXPORT LPCWSTR AvailableDevices(void* data, const int argc, WCHAR* argv[]) {
 	return availableDevices.c_str();
 }
-
 
 /*
 * Can be called as a section variable, to get the status of the Bluetooth adapter
@@ -242,20 +260,27 @@ void updateBluetoothStatus(Measure* measure) {
 *  - if the device is connected
 *  - if the device is authenticated
 *  - if the device is remembered
+*  - the device address
 *  - when the device was last seen
 *  - when the device was last used
 */
 void updateDevices(Measure* measure) {
-	std::thread updateThread([measure]() {
+	updateThread = std::thread([measure]() {
+		if (!bufferMutex.try_lock()) {
+			RmLogF(measure->rm, LOG_ERROR, L"Another thread is already updating the devices");
+			return;
+		}
 
 		devicesBuffer.clear();
 		fileBufferString.clear();
+		set<ULONGLONG> deviceAddresses; // To store unique device addresses
+		set<wstring> deviceNames; // To store unique device names
 
 		HANDLE hRadio;
 		BLUETOOTH_FIND_RADIO_PARAMS btfrp = { sizeof(btfrp) };
 		HBLUETOOTH_RADIO_FIND hFind = BluetoothFindFirstRadio(&btfrp, &hRadio);
 
-		if (hFind != NULL) {
+		if (hFind != nullptr) {
 			do {
 				BLUETOOTH_RADIO_INFO radioInfo = { sizeof(BLUETOOTH_RADIO_INFO) };
 				DWORD dwResult = BluetoothGetRadioInfo(hRadio, &radioInfo);
@@ -271,21 +296,26 @@ void updateDevices(Measure* measure) {
 					deviceSearchParams.hRadio = hRadio;
 
 					HBLUETOOTH_DEVICE_FIND hDeviceFind = BluetoothFindFirstDevice(&deviceSearchParams, &deviceInfo);
-					if (hDeviceFind != NULL) {
+					if (hDeviceFind != nullptr) {
 						do {
-							if (deviceInfo.szName && deviceInfo.stLastUsed.wYear != 1601) {		// Check to remove ghost devices
+							if (deviceInfo.szName && deviceInfo.stLastUsed.wYear != 1601 && deviceAddresses.find(deviceInfo.Address.ullLong) == deviceAddresses.end() && deviceNames.find(deviceInfo.szName) == deviceNames.end()) { // Check to remove ghost devices and duplicate addresses
+								deviceAddresses.insert(deviceInfo.Address.ullLong); // Add the device address to the set
+								deviceNames.emplace(deviceInfo.szName); // Add the device name to the set
+
 								wstring wDeviceName(deviceInfo.szName);
-								wstring wDeviceConnected = to_wstring((deviceInfo.fConnected ? 1 : 0));
-								wstring wDeviceAuthenticated = to_wstring((deviceInfo.fAuthenticated ? 1 : 0));
-								wstring wDeviceRemembered = to_wstring((deviceInfo.fRemembered ? 1 : 0));
+								wstring wDeviceConnected = to_wstring(deviceInfo.fConnected ? 1 : 0);
+								wstring wDeviceAuthenticated = to_wstring(deviceInfo.fAuthenticated ? 1 : 0);
+								wstring wDeviceRemembered = to_wstring(deviceInfo.fRemembered ? 1 : 0);
+								wstring wDeviceAddress = to_wstring(deviceInfo.Address.ullLong);
 								wstring wDeviceLastSeen = to_wstring(deviceInfo.stLastSeen.wMonth) + L"/" + to_wstring(deviceInfo.stLastSeen.wDay) + L"/" + to_wstring(deviceInfo.stLastSeen.wYear) + L" " + to_wstring(deviceInfo.stLastSeen.wHour) + L":" + to_wstring(deviceInfo.stLastSeen.wMinute) + L":" + to_wstring(deviceInfo.stLastSeen.wSecond);
 								wstring wDeviceLastUsed = to_wstring(deviceInfo.stLastUsed.wMonth) + L"/" + to_wstring(deviceInfo.stLastUsed.wDay) + L"/" + to_wstring(deviceInfo.stLastUsed.wYear) + L" " + to_wstring(deviceInfo.stLastUsed.wHour) + L":" + to_wstring(deviceInfo.stLastUsed.wMinute) + L":" + to_wstring(deviceInfo.stLastUsed.wSecond);
 								wstring wDivider = L"|";
 
 								string deviceName(wDeviceName.begin(), wDeviceName.end());
-								string DeviceConnected = to_string((deviceInfo.fConnected ? 1 : 0));
-								string DeviceAuthenticated = to_string((deviceInfo.fAuthenticated ? 1 : 0));
-								string DeviceRemembered = to_string((deviceInfo.fRemembered ? 1 : 0));
+								string DeviceConnected = to_string(deviceInfo.fConnected ? 1 : 0);
+								string DeviceAuthenticated = to_string(deviceInfo.fAuthenticated ? 1 : 0);
+								string DeviceRemembered = to_string(deviceInfo.fRemembered ? 1 : 0);
+								string DeviceAddress = to_string(deviceInfo.Address.ullLong);
 								string deviceLastSeen = to_string(deviceInfo.stLastSeen.wMonth) + "/" + to_string(deviceInfo.stLastSeen.wDay) + "/" + to_string(deviceInfo.stLastSeen.wYear) + " " + to_string(deviceInfo.stLastSeen.wHour) + ":" + to_string(deviceInfo.stLastSeen.wMinute) + ":" + to_string(deviceInfo.stLastSeen.wSecond);
 								string deviceLastUsed = to_string(deviceInfo.stLastUsed.wMonth) + "/" + to_string(deviceInfo.stLastUsed.wDay) + "/" + to_string(deviceInfo.stLastUsed.wYear) + " " + to_string(deviceInfo.stLastUsed.wHour) + ":" + to_string(deviceInfo.stLastUsed.wMinute) + ":" + to_string(deviceInfo.stLastUsed.wSecond);
 								string divider = "|";
@@ -297,6 +327,7 @@ void updateDevices(Measure* measure) {
 									wDeviceConnected + wDivider +
 									wDeviceAuthenticated + wDivider +
 									wDeviceRemembered + wDivider +
+									wDeviceAddress + wDivider +
 									wDeviceLastSeen + wDivider +
 									wDeviceLastUsed +
 									L";"
@@ -307,6 +338,7 @@ void updateDevices(Measure* measure) {
 									DeviceConnected + divider +
 									DeviceAuthenticated + divider +
 									DeviceRemembered + divider +
+									DeviceAddress + divider +
 									deviceLastSeen + divider +
 									deviceLastUsed +
 									";\n"
@@ -320,7 +352,9 @@ void updateDevices(Measure* measure) {
 			} while (BluetoothFindNextRadio(hFind, &hRadio));
 			BluetoothFindRadioClose(hFind);
 		}
-		availableDevices = devicesBuffer;	// Set the availableDevices string to the content of the buffer to avoid partial lists
+		availableDevices = devicesBuffer; // Set the availableDevices string to the content of the buffer to avoid partial lists
+
+		bufferMutex.unlock(); // Unlock the mutex
 
 		// Write to file if the "OutputPath" field is populated
 		if (measure->outputPath != L"") {
@@ -377,7 +411,7 @@ void enableBluetooth(Measure* measure) {
 		for (Radio const& radio : radios) {
 			if (radio.Kind() == RadioKind::Bluetooth) {
 				radio.SetStateAsync(RadioState::On).get();
-				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Disabled Bluetooth adapter");
+				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Enabled Bluetooth adapter");
 				bluetoothStatus = L"1";
 				break;
 			}

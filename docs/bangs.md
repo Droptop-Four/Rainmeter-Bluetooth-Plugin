@@ -23,7 +23,7 @@ Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 Disables the Bluetooth adapter.
 
 {% hint style="warning" %}
-Available if the [#type](options.md#type "mention") is set to `2` or `0`.
+Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 {% endhint %}
 
 {% code title="Example Bang" %}
@@ -37,7 +37,7 @@ Available if the [#type](options.md#type "mention") is set to `2` or `0`.
 Enables the Bluetooth adapter.
 
 {% hint style="warning" %}
-Available if the [#type](options.md#type "mention") is set to `2` or `0`.
+Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 {% endhint %}
 
 {% code title="Example Bang" %}

@@ -88,10 +88,13 @@ function _Populate(PageDevice1, PageDevice2)
     local Device1Remembered = Device1[4]
     SKIN:Bang("!SetVariable", "Device1Remembered", Device1Remembered)
     SKIN:Bang("!WriteKeyValue", "Variables", "Device1Remembered", string.format('%s', Device1Remembered), "Example.ini")
-    local Device1LastSeen = Device1[5]
+    local Device1Address = Device1[5]
+    SKIN:Bang("!SetVariable", "Device1Address", Device1Address)
+    SKIN:Bang("!WriteKeyValue", "Variables", "Device1Address", string.format('%s', Device1Address), "Example.ini")
+    local Device1LastSeen = Device1[6]
     SKIN:Bang("!SetVariable", "Device1LastSeen", Device1LastSeen)
     SKIN:Bang("!WriteKeyValue", "Variables", "Device1LastSeen", string.format('%s', Device1LastSeen), "Example.ini")
-    local Device1LastUsed = Device1[6]
+    local Device1LastUsed = Device1[7]
     SKIN:Bang("!SetVariable", "Device1LastUsed", Device1LastUsed)
     SKIN:Bang("!WriteKeyValue", "Variables", "Device1LastUsed", string.format('%s', Device1LastUsed), "Example.ini")
 
@@ -109,10 +112,13 @@ function _Populate(PageDevice1, PageDevice2)
     local Device2Remembered = Device2[4]
     SKIN:Bang("!SetVariable", "Device2Remembered", Device2Remembered)
     SKIN:Bang("!WriteKeyValue", "Variables", "Device2Remembered", string.format('%s', Device2Remembered), "Example.ini")
-    local Device2LastSeen = Device2[5]
+    local Device2Address = Device2[5]
+    SKIN:Bang("!SetVariable", "Device2Address", Device2Address)
+    SKIN:Bang("!WriteKeyValue", "Variables", "Device2Address", string.format('%s', Device2Address), "Example.ini")
+    local Device2LastSeen = Device2[6]
     SKIN:Bang("!SetVariable", "Device2LastSeen", Device2LastSeen)
     SKIN:Bang("!WriteKeyValue", "Variables", "Device2LastSeen", string.format('%s', Device2LastSeen), "Example.ini")
-    local Device2LastUsed = Device2[6]
+    local Device2LastUsed = Device2[7]
     SKIN:Bang("!SetVariable", "Device2LastUsed", Device2LastUsed)
     SKIN:Bang("!WriteKeyValue", "Variables", "Device2LastUsed", string.format('%s', Device2LastUsed), "Example.ini")
 end

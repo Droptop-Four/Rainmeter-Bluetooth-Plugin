@@ -81,8 +81,8 @@ The file will have this structure:
 
 {% code title="@Resources/output.txt" lineNumbers="true" fullWidth="false" %}
 ```
-device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|datetime_last_seen|datetime_last_used;
-device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|datetime_last_seen|datetime_last_used;
+device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;
+device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;
 ...
 ```
 {% endcode %}
@@ -117,7 +117,7 @@ The name of the file that contains the [#devicesvariable](options.md#devicesvari
 {% code title="Example" lineNumbers="true" %}
 ```ini
 [Variables]
-Variable1=device_name|connected[0,1]|Authenticated[0,1]|Remembered[0,1]|datetime_last_seen|datetime_last_used;...
+Variable1=device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;...
 
 [BluetoothMeasure]
 Measure=Plugin

@@ -25,7 +25,7 @@ The plugin at every update, is going to scan for Bluetooth devices, and update t
 The formatted string is going to be in the following format:
 
 ```plaintext
-device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|datetime_last_seen|datetime_last_used;
+device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;
 ```
 
 This is an example of how you can use the plugin in a skin:
@@ -34,7 +34,7 @@ This is an example of how you can use the plugin in a skin:
 [Bluetooth]
 Measure=Plugin
 Plugin=Bluetooth
-UpdateDivider=10    ; Keep a relatively high value, to avoid spamming the plugin with update requests that cannot terminate
+UpdateDivider=20    ; Keep a relatively high value, to avoid spamming the plugin with update requests that cannot terminate
 DevicesUpdatedAction=[!CommandMeasure LuaScript "Refresh()"]
 
 [LuaScript]
@@ -47,7 +47,7 @@ UpdateDivider=-1
 function Refresh()
     local DevicesString = SKIN:ReplaceVariables('[&BluetoothMeasure:AvailableDevices()]')
     -- DevicesString = Formatted string of all devices
-    -- ("device_name|connected[0,1]|Authenticated[0,1]|Remembered[0,1]|datetime_last_seen|datetime_last_used;")
+    -- ("device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;")
 
     -- Do something with the devices list
     -- See example skin for an example
