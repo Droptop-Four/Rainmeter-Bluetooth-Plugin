@@ -7,6 +7,29 @@
 	"settings": {
 		"files.associations": {
 			"string": "cpp"
-		}
+		},
+		"Lua.diagnostics.globals": [
+			"SKIN"
+		],
+		"workbench.colorCustomizations": {
+			"activityBar.activeBackground": "#e0a354",
+			"activityBar.background": "#e0a354",
+			"activityBar.foreground": "#15202b",
+			"activityBar.inactiveForeground": "#15202b99",
+			"activityBarBadge.background": "#e4faf0",
+			"activityBarBadge.foreground": "#15202b",
+			"commandCenter.border": "#15202b99",
+			"sash.hoverBorder": "#e0a354",
+			"statusBar.background": "#d88c29",
+			"statusBar.foreground": "#15202b",
+			"statusBarItem.hoverBackground": "#ae7020",
+			"statusBarItem.remoteBackground": "#d88c29",
+			"statusBarItem.remoteForeground": "#15202b",
+			"titleBar.activeBackground": "#d88c29",
+			"titleBar.activeForeground": "#15202b",
+			"titleBar.inactiveBackground": "#d88c2999",
+			"titleBar.inactiveForeground": "#15202b99"
+		},
+		"peacock.color": "d88c29"
 	}
 }

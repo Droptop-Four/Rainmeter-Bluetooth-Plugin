@@ -1,18 +1,20 @@
 #pragma once
 #include <string>
+#include <Windows.h>
 
 using namespace std;
+
 class Measure {
 public:
-
 	void* rm;
 	void* skin;
 
 	int pluginType;
 	std::wstring updateAction;
-	std::wstring outputPath;
-	std::wstring devicesVariable;
-	std::wstring variablesFile;
+	std::wstring outputFile;
+	std::wstring thumbnailsFolder;
+	//std::wstring devicesVariable;
+	//std::wstring variablesFile;
 
 	Measure(void* _rm);
 	~Measure();

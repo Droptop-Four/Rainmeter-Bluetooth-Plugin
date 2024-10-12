@@ -25,7 +25,9 @@ body:
       label: Version
       description: What version of the plugin are you using?
       options:
-        - 0.0.7
+        - 0.0.7.0
+        - 0.0.8.0
+        - 0.1.0.0
       default: 0
     validations:
       required: true

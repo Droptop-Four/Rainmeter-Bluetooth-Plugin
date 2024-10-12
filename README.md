@@ -1,22 +1,20 @@
 # Bluetooth Plugin for Rainmeter
 
-This plugin is still a WIP (Work In Progress) and it doesn't include all the features that could be useful to have. If you want to see planned features, please check the [Features](#features) section. If you want to help, please check the [Contributing](#contributing) section.
+> This plugin is still a WIP (Work In Progress) and it doesn't include all the features that could be useful to have. If you want to see planned features, please check the [Features](#features) section. If you want to help, please check the [Contributing](#contributing) section.
 
 ## Installation
 
-Download the latest example rmskin from the [releases](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/releases) page and install it: the plugin will be present in the package.
+Download the latest example rmskin from the [releases](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/releases) page and install it: the plugin will be in the package.
 
 Else, you can download the zip package from the latest [release](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/releases) and extract the dll that corresponds to the Windows architecture you are using (x32 or x64) to `%appdata%\Rainmeter\Plugins`.
 
 ### Requirements
 
-_TODO_
-
-<!-- TODO: add requirements -->
+- Windows 10
 
 ## Documentation
 
-[https://droptop.gitbook.io/rainmeter-bluetooth-plugin](https://droptop.gitbook.io/rainmeter-bluetooth-plugin)
+Head over to [https://droptop.gitbook.io/rainmeter-bluetooth-plugin](https://droptop.gitbook.io/rainmeter-bluetooth-plugin) to read the full documentation.
 
 ## Basic Usage
 
@@ -27,7 +25,7 @@ The plugin at every update, is going to scan for Bluetooth devices, and update t
 The formatted string is going to be in the following format:
 
 ```plaintext
-device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;
+device_name|device_address|device_id|connected[0,1]|paired[0,1]|can_pair[0,1]major_category|minor_category|has_battery_level[0,1]|battery|is_ble[0,1];
 ```
 
 This is an example of how you can use the plugin in a skin:
@@ -36,8 +34,8 @@ This is an example of how you can use the plugin in a skin:
 [Bluetooth]
 Measure=Plugin
 Plugin=Bluetooth
-UpdateDivider=20    ; Keep a relatively high value, to avoid spamming the plugin with update requests that cannot terminate
 DevicesUpdatedAction=[!CommandMeasure LuaScript "Refresh()"]
+UpdateDivider=30    ; Keep a relatively high value, to avoid spamming the plugin with update requests that cannot terminate
 
 [LuaScript]
 Measure=Script
@@ -49,7 +47,7 @@ UpdateDivider=-1
 function Refresh()
     local DevicesString = SKIN:ReplaceVariables('[&BluetoothMeasure:AvailableDevices()]')
     -- DevicesString = Formatted string of all devices
-    -- ("device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;")
+    -- ("device_name|device_address|device_id|connected[0,1]|paired[0,1]|can_pair[0,1]major_category|minor_category|has_battery_level[0,1]|battery|is_ble[0,1];")
 
     -- Do something with the devices list
     -- See example skin for an example
@@ -63,12 +61,35 @@ For a complete example, check out the [example skin](https://github.com/Droptop-
 Those are the features we'd like to implement/have in a bluetooth plugin:
 
 - [x] Enable/Disable/Toggle Bluetooth adapter
-- [x] Scan & list Bluetooth devices
-- [x] Return the Bluetooth adapter status
-- [ ] Scan & list BluetoothLE devices
-- [ ] Display Device Battery
+- [x] List Bluetooth devices
+- [ ] Discover Bluetooth devices
+- [x] Return the Bluetooth status
+- [x] List BluetoothLE devices
+- [ ] Discover BluetoothLE devices
 - [ ] Connect to devices
 - [ ] Disconnect devices
+- [ ] Pair devices
+- [ ] Unpair devices
+- [x] Get device thumbnail
+
+### Device Properties
+
+Those are the returned properties for every device:
+
+- [x] Name
+- [x] Address
+- [x] Id
+- [x] Connected
+- [x] Paired
+- [x] Can Pair
+- [x] Major Category
+- [x] Minor Category
+- [x] Has Battery Level
+- [x] Battery
+- [x] Is Bluetooth LE
+- [ ] Signal strength
+
+To know more about those properties, read the [docs](https://droptop.gitbook.io/rainmeter-bluetooth-plugin/section-variables#device-properties).
 
 ## Contributing
 
