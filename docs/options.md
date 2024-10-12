@@ -30,7 +30,7 @@ This is the DEFAULT `Type`
 {% tab title="Type=1" %}
 **Description:** `Get/Update the Bluetooth status.`
 
-**Plugin Measure:** Returns the Bluetooth Status
+**Plugin Measure:** `Returns the Bluetooth Status`
 
 **Available Bangs:**
 
@@ -70,19 +70,20 @@ The list of bangs that needs to be executed when the measure is updated.
 Measure=Plugin
 Plugin=Bluetooth
 UpdateAction=[!Log "Bang1" Debug][!Log "Bang2" Debug]
+UpdateDivider=30
 ```
 {% endcode %}
 
-## OutputPath
+## OutputFile
 
-The path of an output file you want to set.
+The path of an output file you want to save the devices list to.
 
 The file will have this structure:
 
 {% code title="@Resources/output.txt" lineNumbers="true" fullWidth="false" %}
 ```
-device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;
-device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;
+device_name|device_address|device_id|connected[0,1]|paired[0,1]|can_pair[0,1]major_category|minor_category|has_battery_level[0,1]|battery|is_ble[0,1];
+device_name|device_address|device_id|connected[0,1]|paired[0,1]|can_pair[0,1]major_category|minor_category|has_battery_level[0,1]|battery|is_ble[0,1];
 ...
 ```
 {% endcode %}
@@ -92,37 +93,31 @@ device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_l
 [BluetoothMeasure]
 Measure=Plugin
 Plugin=Bluetooth
-OutputPath=#@#output.txt
+OutputFile=#CURRENTPATH#\Devices.txt
+UpdateDivider=30
 ```
 {% endcode %}
 
-This example saves the list of devices in a file in `@Resources/output.txt`.
+This example saves the list of devices in a file in `#CURRENTPATH#\Devices.txt`.
 
-## DevicesVariable
+## ThumbnailsFolder
 
-{% hint style="warning" %}
-If this is defined, also [#variablesfile](options.md#variablesfile "mention") needs to be defined
-{% endhint %}
+The path of the folder you want to save devices thumbnails to.
 
-The name of the variable that you want the plugin to update when
+The thumbnails are managed by Windows, and are a visual representation of the [#major-category](section-variables.md#major-category "mention") or of the [#minor-category](section-variables.md#minor-category "mention") of the device if present.
 
-## VariablesFile
-
-{% hint style="warning" %}
-If this is defined, also [#devicesvariable](options.md#devicesvariable "mention") needs to be defined
-{% endhint %}
-
-The name of the file that contains the [#devicesvariable](options.md#devicesvariable "mention").
-
-{% code title="Example" lineNumbers="true" %}
 ```ini
-[Variables]
-Variable1=device_name|connected[0,1]|authenticated[0,1]|remembered[0,1]|address|datetime_last_seen|datetime_last_used;...
-
-[BluetoothMeasure]
+[BluetoothDevicesMeasure]
 Measure=Plugin
 Plugin=Bluetooth
-DevicesVariable=Variable1
-VariablesFile=#CURRENTFILE#
+ThumbnailsFolder=#CURRENTPATH#\img
+UpdateDivider=30
 ```
-{% endcode %}
+
+This example saves the images in the folder `#CURRENTPATH#\img`.
+
+These are a couple of examples of thumbnails:
+
+* mouse: <img src=".gitbook/assets/Device4_thumbnail.jpg" alt="" data-size="line">
+* phone: <img src=".gitbook/assets/Device1_thumbnail.jpg" alt="" data-size="line">
+* speaker: <img src=".gitbook/assets/Device3_thumbnail.jpg" alt="" data-size="line">
