@@ -1,24 +1,16 @@
-#pragma comment(lib, "Bthprops.lib")
-
-#include "Plugin.h"
 #include "Measure.h"
-#include <bluetoothapis.h>
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Devices.Radios.h>
-#include <winrt/Windows.Foundation.Collections.h>
-#include <set>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <fstream>
-#include <iostream>
+#include "Plugin.h"
 
 using namespace std;
 using namespace winrt;
-using namespace Windows::Foundation;
+using namespace Windows::Devices::Bluetooth;
+using namespace Windows::Devices::Enumeration;
+using namespace Windows::Devices::Power;
 using namespace Windows::Devices::Radios;
 using namespace Windows::Foundation::Collections;
-
+using namespace Windows::Foundation;
+using namespace Windows::Storage::Streams;
+using namespace Windows::Storage;
 
 HINSTANCE MODULE_INSTANCE;
 
@@ -26,21 +18,26 @@ HINSTANCE MODULE_INSTANCE;
 // ------------ [Global Variables] ------------
 #pragma region GlobalVariables
 
-static wstring availableDevices;	// Formatted string of all devices ("device_name|connected[0,1]|Authenticated[0,1]|Remembered[0,1]|datetime_last_seen|datetime_last_used;")
-static wstring devicesBuffer;		// Buffer to save devices during list updates to avoid getting back partial lists
-static string fileBufferString;		// Buffer to save devices during file updates to avoid having an empty file between updates
-static wstring bluetoothStatus;		// String to hold the status of the Bluetooth adapter
-static std::mutex bufferMutex;
-
+std::unordered_map<uint64_t, DeviceInfo> deviceMap;
+std::mutex bluetoothOperationMutex;
 std::thread updateThread;
+
+wstring availableDevices;		// Formatted string of all devices ("device_name|device_address|device_id|connected[0,1]|paired[0,1]|can_pair[0,1]major_category|minor_category|has_battery_level[0,1]|battery|is_ble[0,1];")
+wstring bluetoothStatus;		// String to hold the status of the Bluetooth adapter
 
 #pragma endregion
 
 
-/*
-* Entry point to Dll, run once at dll load
-* Use it to store the dll instance, in case you need it for hooks and other stuff
-*/
+// ------------ [Start Point] ------------
+/**
+ * Entry point to Dll, run once at dll load
+ * Use it to store the dll instance, in case you need it for hooks and other stuff
+ *
+ * @param hinstDLL: Handle to the DLL module
+ * @param fdwReason: Reason for calling function
+ * @param lpvReserved: Reserved
+ * @return TRUE if successful, FALSE otherwise
+ */
 BOOL WINAPI DllMain(
 	HINSTANCE hinstDLL,  // handle to DLL module
 	DWORD fdwReason,     // reason for calling function
@@ -57,71 +54,83 @@ BOOL WINAPI DllMain(
 	return TRUE;
 }
 
-
 // ------------ [Plugin Functions] ------------
 #pragma region PluginFunctions
 
-/*
-* Called once, at skin load or refresh
-* Read any options that need to be constant here
-*/
+/**
+ * Called once, at skin load or refresh
+ * Read any options that need to be constant here
+ *
+ * @param data: Pointer to the Measure object
+ * @param rm: Pointer to the Rainmeter object
+ */
 PLUGIN_EXPORT void Initialize(void** data, void* rm) {
 	Measure* measure = new Measure(rm);
 	*data = measure;
 	measure->Initialize();
 }
 
-/*
-* Called once after Initialize
-* Called before every Update if DynamicVariables=1 is defined
-* Read options that can require dynamic variables here
-*/
+/**
+ * Called once after Initialize
+ * Called before every Update if DynamicVariables=1 is defined
+ * Read options that can require dynamic variables here
+ *
+ * @param data: Pointer to the Measure object
+ * @param rm: Pointer to the Rainmeter object
+ * @param maxValue: Pointer to the maximum value of the measure
+ */
 PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue) {
 	Measure* measure = (Measure*)data;
 }
 
-/*
-* Called at every measure update
-* Update your values here
-*/
+/**
+ * Called at every measure update
+ * Update your values here
+ *
+ * @param data: Pointer to the Measure object
+ * @return The numeric value of the measure
+ */
 PLUGIN_EXPORT double Update(void* data) {
-	Measure* measure = (Measure*)data;
-	if (measure->pluginType == 0) {			// Updates the Bluetooth status and Bluetooth devices
+	auto measure = static_cast<Measure*>(data);
+	switch (measure->pluginType) {
+	case 0: // Updates the Bluetooth status and Bluetooth devices
 		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating status & devices");
 		updateDevices(measure);
 		updateBluetoothStatus(measure);
-	}
-	else if (measure->pluginType == 1) {	// Only updates the Bluetooth status
+		break;
+	case 1: // Only updates the Bluetooth status
 		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating status");
 		updateBluetoothStatus(measure);
-	}
-	else if (measure->pluginType == 2) {	// Only updates the Bluetooth devices
+		break;
+	case 2: // Only updates the Bluetooth devices
 		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating devices");
 		updateDevices(measure);
-	}
-	else {
+		break;
+	default:
 		RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Invalid PluginType");
+		break;
 	}
 	measure->Execute(measure->updateAction.c_str());
 
 	if (measure->pluginType == 1) {
-		double status = _wtof(bluetoothStatus.c_str());
-		return status;
+		return _wtof(bluetoothStatus.c_str());
 	}
 	return 0.0;
 }
 
-/*
-* Called every time a [MeasureThisPlugin] is resolved
-* DO NOT do any lengthy operations here, use Update for that
-* Should only be used if you want the string value to be different than the numeric value
-*/
-/*PLUGIN_EXPORT LPCWSTR GetString(void* data)
-{
-	Measure* measure = (Measure*)data;
-	return nullptr;
-}*/
-
+/**
+ * Called every time a [MeasureThisPlugin] is resolved
+ * DO NOT do any lengthy operations here, use Update for that
+ * Should only be used if you want the string value to be different than the numeric value
+ *
+ * @param data: Pointer to the Measure object
+ * @return The string value of the measure
+ */
+ /*PLUGIN_EXPORT LPCWSTR GetString(void* data)
+ {
+	 Measure* measure = (Measure*)data;
+	 return nullptr;
+ }*/
 
 PLUGIN_EXPORT void ExecuteBang(void* data, LPCWSTR args) {
 	Measure* measure = (Measure*)data;
@@ -185,10 +194,12 @@ PLUGIN_EXPORT void ExecuteBang(void* data, LPCWSTR args) {
 	}
 }
 
-/*
-* Called once, at skin unload (a skin is unloaded when you Refresh it)
-* Perform any necessary cleanups here
-*/
+/**
+ * Called once, at skin unload (a skin is unloaded when you Refresh it)
+ * Perform any necessary cleanups here
+ *
+ * @param data: Pointer to the Measure object
+ */
 PLUGIN_EXPORT void Finalize(void* data) {
 	Measure* measure = (Measure*)data;
 
@@ -197,27 +208,35 @@ PLUGIN_EXPORT void Finalize(void* data) {
 	// Clean up resources
 	delete measure;
 	availableDevices.clear();
-	devicesBuffer.clear();
-	fileBufferString.clear();
 	bluetoothStatus.clear();
+	deviceMap.clear();
 }
 
 #pragma endregion
 
-
 // ------------ [Section Variables] ------------
 #pragma region SectionVariables
 
-/*
-* Can be called as a section variable, to get the most updated list of devices
-*/
+/**
+ * Can be called as a section variable, to get the most updated list of devices
+ *
+ * @param data: Pointer to the Measure object
+ * @param argc: Number of arguments
+ * @param argv: Array of arguments
+ * @return The list of devices as a formatted string. Each device is separated by ";" and the device details are separated by "|".
+ */
 PLUGIN_EXPORT LPCWSTR AvailableDevices(void* data, const int argc, WCHAR* argv[]) {
 	return availableDevices.c_str();
 }
 
-/*
-* Can be called as a section variable, to get the status of the Bluetooth adapter
-*/
+/**
+ * Can be called as a section variable, to get the status of the Bluetooth adapter
+ *
+ * @param data: Pointer to the Measure object
+ * @param argc: Number of arguments
+ * @param argv: Array of arguments
+ * @return The status of the Bluetooth adapter as a string. "1" if the adapter is on, "0" if the adapter is off.
+ */
 PLUGIN_EXPORT LPCWSTR BluetoothStatus(void* data, const int argc, WCHAR* argv[]) {
 	Measure* measure = (Measure*)data;
 	return bluetoothStatus.c_str();
@@ -225,229 +244,893 @@ PLUGIN_EXPORT LPCWSTR BluetoothStatus(void* data, const int argc, WCHAR* argv[])
 
 #pragma endregion
 
-
 // ------------ [Internal Functions] ------------
 #pragma region InternalFunctions
 
-/*
-* Threaded function that updates the status of the Bluetooth adapter
-*/
-void updateBluetoothStatus(Measure* measure) {
-	std::thread updateBluetoothStatusThread([measure]() {
+std::wstring trim(const std::wstring& str) {
+	if (str.empty())
+		return str;
+
+	size_t first = str.find_first_not_of(L" \t\n\r\f\v");
+	size_t last = str.find_last_not_of(L" \t\n\r\f\v");
+
+	if (first == std::wstring::npos) // str is all whitespace
+		return L"";
+
+	return str.substr(first, (last - first + 1));
+}
+
+/**
+ * Retrieves the status of the Bluetooth adapter.
+ *
+ * @return The status of the Bluetooth adapter as a string. "1" if the adapter is on, "0" if the adapter is off.
+ */
+wstring getBluetoothStatus() {
+	init_apartment();
+	Radio::RequestAccessAsync().get();
+	auto radios = Radio::GetRadiosAsync().get();
+	for (const auto& radio : radios) {
+		if (radio.Kind() == RadioKind::Bluetooth) {
+			return (radio.State() == RadioState::On) ? L"1" : L"0";
+		}
+	}
+	return L"0";
+}
+
+/**
+ * Controls the Bluetooth adapter state.
+ *
+ * @param measure The Measure object.
+ * @param targetState The target state of the Bluetooth adapter.
+ */
+void setBluetoothStatus(Measure* measure, RadioState targetState) {
+	std::thread setBluetoothStatusThread([measure, targetState]() {
+		std::lock_guard<std::mutex> lock(bluetoothOperationMutex);
 		init_apartment();
 		Radio::RequestAccessAsync().get();
 		IVectorView<Radio> radios = Radio::GetRadiosAsync().get();
 		for (Radio const& radio : radios) {
 			if (radio.Kind() == RadioKind::Bluetooth) {
-				if (radio.State() == RadioState::On) {
-					bluetoothStatus = L"1";
-				}
-				else {
-					bluetoothStatus = L"0";
-				}
-				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updated Bluetooth Status");
+				radio.SetStateAsync(targetState).get();
+				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Bluetooth adapter state changed");
+				bluetoothStatus = (targetState == RadioState::On) ? L"1" : L"0";
+				break;
 			}
 		}
 		});
 
-	updateBluetoothStatusThread.detach();
+	setBluetoothStatusThread.detach();
 }
 
-/*
-* Threaded function that updates the bluetooth devices seen in every bluetooth interface on the machine.
-* It can get:
-*  - device name
-*  - if the device is connected
-*  - if the device is authenticated
-*  - if the device is remembered
-*  - the device address
-*  - when the device was last seen
-*  - when the device was last used
-*/
-void updateDevices(Measure* measure) {
-	updateThread = std::thread([measure]() {
-		if (!bufferMutex.try_lock()) {
-			RmLogF(measure->rm, LOG_ERROR, L"Another thread is already updating the devices");
-			return;
-		}
-
-		devicesBuffer.clear();
-		fileBufferString.clear();
-		set<ULONGLONG> deviceAddresses; // To store unique device addresses
-		set<wstring> deviceNames; // To store unique device names
-
-		HANDLE hRadio;
-		BLUETOOTH_FIND_RADIO_PARAMS btfrp = { sizeof(btfrp) };
-		HBLUETOOTH_RADIO_FIND hFind = BluetoothFindFirstRadio(&btfrp, &hRadio);
-
-		if (hFind != nullptr) {
-			do {
-				BLUETOOTH_RADIO_INFO radioInfo = { sizeof(BLUETOOTH_RADIO_INFO) };
-				DWORD dwResult = BluetoothGetRadioInfo(hRadio, &radioInfo);
-				if (dwResult == ERROR_SUCCESS) {
-					BLUETOOTH_DEVICE_INFO_STRUCT deviceInfo = { sizeof(BLUETOOTH_DEVICE_INFO_STRUCT) };
-					BLUETOOTH_DEVICE_SEARCH_PARAMS deviceSearchParams = { sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS) };
-					deviceSearchParams.fReturnAuthenticated = TRUE;
-					deviceSearchParams.fReturnRemembered = TRUE;
-					deviceSearchParams.fReturnUnknown = TRUE;
-					deviceSearchParams.fReturnConnected = TRUE;
-					deviceSearchParams.fIssueInquiry = TRUE;
-					deviceSearchParams.cTimeoutMultiplier = 4;
-					deviceSearchParams.hRadio = hRadio;
-
-					HBLUETOOTH_DEVICE_FIND hDeviceFind = BluetoothFindFirstDevice(&deviceSearchParams, &deviceInfo);
-					if (hDeviceFind != nullptr) {
-						do {
-							if (deviceInfo.szName && deviceInfo.stLastUsed.wYear != 1601 && deviceAddresses.find(deviceInfo.Address.ullLong) == deviceAddresses.end() && deviceNames.find(deviceInfo.szName) == deviceNames.end()) { // Check to remove ghost devices and duplicate addresses
-								deviceAddresses.insert(deviceInfo.Address.ullLong); // Add the device address to the set
-								deviceNames.emplace(deviceInfo.szName); // Add the device name to the set
-
-								wstring wDeviceName(deviceInfo.szName);
-								wstring wDeviceConnected = to_wstring(deviceInfo.fConnected ? 1 : 0);
-								wstring wDeviceAuthenticated = to_wstring(deviceInfo.fAuthenticated ? 1 : 0);
-								wstring wDeviceRemembered = to_wstring(deviceInfo.fRemembered ? 1 : 0);
-								wstring wDeviceAddress = to_wstring(deviceInfo.Address.ullLong);
-								wstring wDeviceLastSeen = to_wstring(deviceInfo.stLastSeen.wMonth) + L"/" + to_wstring(deviceInfo.stLastSeen.wDay) + L"/" + to_wstring(deviceInfo.stLastSeen.wYear) + L" " + to_wstring(deviceInfo.stLastSeen.wHour) + L":" + to_wstring(deviceInfo.stLastSeen.wMinute) + L":" + to_wstring(deviceInfo.stLastSeen.wSecond);
-								wstring wDeviceLastUsed = to_wstring(deviceInfo.stLastUsed.wMonth) + L"/" + to_wstring(deviceInfo.stLastUsed.wDay) + L"/" + to_wstring(deviceInfo.stLastUsed.wYear) + L" " + to_wstring(deviceInfo.stLastUsed.wHour) + L":" + to_wstring(deviceInfo.stLastUsed.wMinute) + L":" + to_wstring(deviceInfo.stLastUsed.wSecond);
-								wstring wDivider = L"|";
-
-								string deviceName(wDeviceName.begin(), wDeviceName.end());
-								string DeviceConnected = to_string(deviceInfo.fConnected ? 1 : 0);
-								string DeviceAuthenticated = to_string(deviceInfo.fAuthenticated ? 1 : 0);
-								string DeviceRemembered = to_string(deviceInfo.fRemembered ? 1 : 0);
-								string DeviceAddress = to_string(deviceInfo.Address.ullLong);
-								string deviceLastSeen = to_string(deviceInfo.stLastSeen.wMonth) + "/" + to_string(deviceInfo.stLastSeen.wDay) + "/" + to_string(deviceInfo.stLastSeen.wYear) + " " + to_string(deviceInfo.stLastSeen.wHour) + ":" + to_string(deviceInfo.stLastSeen.wMinute) + ":" + to_string(deviceInfo.stLastSeen.wSecond);
-								string deviceLastUsed = to_string(deviceInfo.stLastUsed.wMonth) + "/" + to_string(deviceInfo.stLastUsed.wDay) + "/" + to_string(deviceInfo.stLastUsed.wYear) + " " + to_string(deviceInfo.stLastUsed.wHour) + ":" + to_string(deviceInfo.stLastUsed.wMinute) + ":" + to_string(deviceInfo.stLastUsed.wSecond);
-								string divider = "|";
-
-								RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Found device: %s", wDeviceName.c_str());
-
-								devicesBuffer.append(
-									wDeviceName + wDivider +
-									wDeviceConnected + wDivider +
-									wDeviceAuthenticated + wDivider +
-									wDeviceRemembered + wDivider +
-									wDeviceAddress + wDivider +
-									wDeviceLastSeen + wDivider +
-									wDeviceLastUsed +
-									L";"
-								);
-
-								fileBufferString.append(
-									deviceName + divider +
-									DeviceConnected + divider +
-									DeviceAuthenticated + divider +
-									DeviceRemembered + divider +
-									DeviceAddress + divider +
-									deviceLastSeen + divider +
-									deviceLastUsed +
-									";\n"
-								);
-							}
-						} while (BluetoothFindNextDevice(hDeviceFind, &deviceInfo));
-						BluetoothFindDeviceClose(hDeviceFind);
-					}
-				}
-				CloseHandle(hRadio);
-			} while (BluetoothFindNextRadio(hFind, &hRadio));
-			BluetoothFindRadioClose(hFind);
-		}
-		availableDevices = devicesBuffer; // Set the availableDevices string to the content of the buffer to avoid partial lists
-
-		bufferMutex.unlock(); // Unlock the mutex
-
-		// Write to file if the "OutputPath" field is populated
-		if (measure->outputPath != L"") {
-			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Writing to file");
-			ofstream outputFile(measure->outputPath, ofstream::trunc);
-			outputFile << fileBufferString;
-			outputFile.close();
-			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] File written");
-		}
-
-		// Update variable of the skin if the "DevicesVariable" and "VariablesFiles" fields are populated
-		if (measure->devicesVariable != L"" && measure->variablesFile != L"") {
-			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating DevicesVariable");
-			wstring setVariableBang = L"[!SetVariable " + measure->devicesVariable + L" \"" + availableDevices.c_str() + L"\"]";
-			RmExecute(measure->skin, setVariableBang.c_str());
-			wstring writeVariableBang = L"[!WriteKeyValue Variables " + measure->devicesVariable + L" \"" + availableDevices.c_str() + L"\" \"" + measure->variablesFile + L"\"]";
-			RmExecute(measure->skin, writeVariableBang.c_str());
-			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] DevicesVariable updated");
-		}
-		});
-
-	updateThread.detach();
-}
-
-/*
-* Function to disable the Bluetooth adapter
-*/
+/**
+ * Function to disable the Bluetooth adapter
+ *
+ * @param measure: Pointer to the Measure object
+ */
 void disableBluetooth(Measure* measure) {
-	std::thread disableBluetoothThread([measure]() {
-		init_apartment();
-		Radio::RequestAccessAsync().get();
-		IVectorView<Radio> radios = Radio::GetRadiosAsync().get();
-		for (Radio const& radio : radios) {
-			if (radio.Kind() == RadioKind::Bluetooth) {
-				radio.SetStateAsync(RadioState::Off).get();
-				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Disabled Bluetooth adapter");
-				bluetoothStatus = L"0";
-				break;
-			}
-		}
-		});
-
-	disableBluetoothThread.detach();
+	setBluetoothStatus(measure, RadioState::Off);
 }
 
-/*
-* Function to enable the Bluetooth adapter
-*/
+/**
+ * Function to enable the Bluetooth adapter
+ *
+ * @param measure: Pointer to the Measure object
+ */
 void enableBluetooth(Measure* measure) {
-	std::thread enableBluetoothThread([measure]() {
-		init_apartment();
-		Radio::RequestAccessAsync().get();
-		IVectorView<Radio> radios = Radio::GetRadiosAsync().get();
-		for (Radio const& radio : radios) {
-			if (radio.Kind() == RadioKind::Bluetooth) {
-				radio.SetStateAsync(RadioState::On).get();
-				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Enabled Bluetooth adapter");
-				bluetoothStatus = L"1";
-				break;
-			}
-		}
-		});
-
-	enableBluetoothThread.detach();
+	setBluetoothStatus(measure, RadioState::On);
 }
 
-/*
-* Function to toggle ON/OFF the Bluetooth adapter
-*/
+/**
+ * Function to toggle ON/OFF the Bluetooth adapter
+ *
+ * @param measure: Pointer to the Measure object
+ */
 void toggleBluetooth(Measure* measure) {
 	std::thread toggleBluetoothThread([measure]() {
+		std::lock_guard<std::mutex> lock(bluetoothOperationMutex);
 		init_apartment();
 		Radio::RequestAccessAsync().get();
 		IVectorView<Radio> radios = Radio::GetRadiosAsync().get();
 		for (Radio const& radio : radios) {
 			if (radio.Kind() == RadioKind::Bluetooth) {
 				RadioState currentState = radio.State();
-				if (currentState == RadioState::On) {
-					radio.SetStateAsync(RadioState::Off).get();
-					RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Disabled Bluetooth adapter");
-					bluetoothStatus = L"0";
-				}
-				else if (currentState == RadioState::Off) {
-					radio.SetStateAsync(RadioState::On).get();
-					RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Enabled Bluetooth adapter");
-					bluetoothStatus = L"1";
-				}
+				RadioState targetState = (currentState == RadioState::On) ? RadioState::Off : RadioState::On;
+				radio.SetStateAsync(targetState).get();
+				RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Bluetooth adapter toggled");
+				bluetoothStatus = (targetState == RadioState::On) ? L"1" : L"0";
 				break;
 			}
 		}
 		});
 
 	toggleBluetoothThread.detach();
+}
+
+/**
+ * Updates the Bluetooth status asynchronously.
+ *
+ * @param measure The Measure object.
+ */
+void updateBluetoothStatus(Measure* measure) {
+	std::thread updateBluetoothStatusThread([measure]() {
+		bluetoothStatus = getBluetoothStatus();
+		});
+
+	updateBluetoothStatusThread.detach();
+}
+
+/**
+ * Retrieves the Bluetooth categories based on the major and minor class.
+ *
+ * @param majorClass The major class of the Bluetooth device.
+ * @param minorClass The minor class of the Bluetooth device.
+ * @return A tuple containing the major and minor category as strings.
+ */
+std::tuple<std::wstring, std::wstring> findBLCategory(BluetoothMajorClass majorClass, BluetoothMinorClass minorClass) {
+	std::wstring Major = L"Unknown";
+	std::wstring Minor = L"Unknown";
+
+	switch (majorClass)
+	{
+	case BluetoothMajorClass::Miscellaneous:
+		Major = L"Miscellaneous";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::Computer:
+		Major = L"Computer";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::ComputerDesktop:
+			Minor = L"Computer Desktop";
+			break;
+		case BluetoothMinorClass::ComputerHandheld:
+			Minor = L"Computer Handheld";
+			break;
+		case BluetoothMinorClass::ComputerLaptop:
+			Minor = L"Computer Laptop";
+			break;
+		case BluetoothMinorClass::ComputerPalmSize:
+			Minor = L"Computer Palm Size";
+			break;
+		case BluetoothMinorClass::ComputerServer:
+			Minor = L"Computer Server";
+			break;
+		case BluetoothMinorClass::ComputerTablet:
+			Minor = L"Computer Tablet";
+			break;
+		case BluetoothMinorClass::ComputerWearable:
+			Minor = L"Computer Wearable";
+			break;
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::Phone:
+		Major = L"Phone";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::PhoneCellular:
+			Minor = L"Phone Cellular";
+			break;
+		case BluetoothMinorClass::PhoneCordless:
+			Minor = L"Phone Cordless";
+			break;
+		case BluetoothMinorClass::PhoneIsdn:
+			Minor = L"Phone ISDN";
+			break;
+		case BluetoothMinorClass::PhoneSmartPhone:
+			Minor = L"Phone Smart Phone";
+			break;
+		case BluetoothMinorClass::PhoneWired:
+			Minor = L"Phone Wired";
+			break;
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::NetworkAccessPoint:
+		Major = L"Network Access Point";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::NetworkFullyAvailable:
+			Minor = L"Network Fully Available";
+			break;
+		case BluetoothMinorClass::NetworkNoServiceAvailable:
+			Minor = L"Network No Service Available";
+			break;
+		case BluetoothMinorClass::NetworkUsed01To17Percent:
+			Minor = L"Network Used 01 To 17 Percent";
+			break;
+		case BluetoothMinorClass::NetworkUsed17To33Percent:
+			Minor = L"Network Used 17 To 33 Percent";
+			break;
+		case BluetoothMinorClass::NetworkUsed33To50Percent:
+			Minor = L"Network Used 33 To 50 Percent";
+			break;
+		case BluetoothMinorClass::NetworkUsed50To67Percent:
+			Minor = L"Network Used 50 To 67 Percent";
+			break;
+		case BluetoothMinorClass::NetworkUsed67To83Percent:
+			Minor = L"Network Used 67 To 83 Percent";
+			break;
+		case BluetoothMinorClass::NetworkUsed83To99Percent:
+			Minor = L"Network Used 83 To 99 Percent";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::AudioVideo:
+		Major = L"Audio/Video";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::AudioVideoCamcorder:
+			Minor = L"Audio Video Camcorder";
+			break;
+		case BluetoothMinorClass::AudioVideoCarAudio:
+			Minor = L"Audio Video Car Audio";
+			break;
+		case BluetoothMinorClass::AudioVideoGamingOrToy:
+			Minor = L"Audio Video Gaming Or Toy";
+			break;
+		case BluetoothMinorClass::AudioVideoHandsFree:
+			Minor = L"Audio Video Hands Free";
+			break;
+		case BluetoothMinorClass::AudioVideoHeadphones:
+			Minor = L"Audio Video Headphones";
+			break;
+		case BluetoothMinorClass::AudioVideoHifiAudioDevice:
+			Minor = L"Audio Video HiFi Audio Device";
+			break;
+		case BluetoothMinorClass::AudioVideoLoudspeaker:
+			Minor = L"Audio Video Loudspeaker";
+			break;
+		case BluetoothMinorClass::AudioVideoMicrophone:
+			Minor = L"Audio Video Microphone";
+			break;
+		case BluetoothMinorClass::AudioVideoPortableAudio:
+			Minor = L"Audio Video Portable Audio";
+			break;
+		case BluetoothMinorClass::AudioVideoSetTopBox:
+			Minor = L"Audio Video Set-Top Box";
+			break;
+		case BluetoothMinorClass::AudioVideoVcr:
+			Minor = L"Audio Video VCR";
+			break;
+		case BluetoothMinorClass::AudioVideoVideoCamera:
+			Minor = L"Audio Video Video Camera";
+			break;
+		case BluetoothMinorClass::AudioVideoVideoConferencing:
+			Minor = L"Audio Video Video Conferencing";
+			break;
+		case BluetoothMinorClass::AudioVideoVideoDisplayAndLoudspeaker:
+			Minor = L"Audio Video Video Display And Loudspeaker";
+			break;
+		case BluetoothMinorClass::AudioVideoVideoMonitor:
+			Minor = L"Audio Video Video Monitor";
+			break;
+		case BluetoothMinorClass::AudioVideoWearableHeadset:
+			Minor = L"Audio Video Wearable Headset";
+			break;
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::Peripheral:
+		Major = L"Peripheral";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::PeripheralCardReader:
+			Minor = L"Peripheral Card Reader";
+			break;
+		case BluetoothMinorClass::PeripheralDigitalPen:
+			Minor = L"Peripheral Digital Pen";
+			break;
+		case BluetoothMinorClass::PeripheralDigitizerTablet:
+			Minor = L"Peripheral Digitizer Tablet";
+			break;
+		case BluetoothMinorClass::PeripheralGamepad:
+			Minor = L"Peripheral Gamepad";
+			break;
+		case BluetoothMinorClass::PeripheralHandheldGesture:
+			Minor = L"Peripheral Handheld Gesture";
+			break;
+		case BluetoothMinorClass::PeripheralHandheldScanner:
+			Minor = L"Peripheral Handheld Scanner";
+			break;
+		case BluetoothMinorClass::PeripheralJoystick:
+			Minor = L"Peripheral Joystick";
+			break;
+		case BluetoothMinorClass::PeripheralRemoteControl:
+			Minor = L"Peripheral Remote Control";
+			break;
+		case BluetoothMinorClass::PeripheralSensing:
+			Minor = L"Peripheral Sensing";
+			break;
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::Imaging:
+		Major = L"Imaging";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::Wearable:
+		Major = L"Wearable";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::WearableGlasses:
+			Minor = L"Wearable Glasses";
+			break;
+		case BluetoothMinorClass::WearableHelmet:
+			Minor = L"Wearable Helmet";
+			break;
+		case BluetoothMinorClass::WearableJacket:
+			Minor = L"Wearable Jacket";
+			break;
+		case BluetoothMinorClass::WearablePager:
+			Minor = L"Wearable Pager";
+			break;
+		case BluetoothMinorClass::WearableWristwatch:
+			Minor = L"Wearable Wristwatch";
+			break;
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::Toy:
+		Major = L"Toy";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::ToyController:
+			Minor = L"Toy Controller";
+			break;
+		case BluetoothMinorClass::ToyDoll:
+			Minor = L"Toy Doll";
+			break;
+		case BluetoothMinorClass::ToyGame:
+			Minor = L"Toy Game";
+			break;
+		case BluetoothMinorClass::ToyRobot:
+			Minor = L"Toy Robot";
+			break;
+		case BluetoothMinorClass::ToyVehicle:
+			Minor = L"Toy Vehicle";
+			break;
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	case BluetoothMajorClass::Health:
+		Major = L"Health";
+		switch (minorClass)
+		{
+		case BluetoothMinorClass::HealthAnkleProsthesis:
+			Minor = L"Health Ankle Prosthesis";
+			break;
+		case BluetoothMinorClass::HealthBloodPressureMonitor:
+			Minor = L"Health Blood Pressure Monitor";
+			break;
+		case BluetoothMinorClass::HealthBodyCompositionAnalyzer:
+			Minor = L"Health Body Composition Analyzer";
+			break;
+		case BluetoothMinorClass::HealthGenericHealthManager:
+			Minor = L"Health Generic Health Manager";
+			break;
+		case BluetoothMinorClass::HealthGlucoseMeter:
+			Minor = L"Health Glucose Meter";
+			break;
+		case BluetoothMinorClass::HealthHealthDataDisplay:
+			Minor = L"Health Health Data Display";
+			break;
+		case BluetoothMinorClass::HealthHeartRateMonitor:
+			Minor = L"Health Heart Rate Monitor";
+			break;
+		case BluetoothMinorClass::HealthKneeProsthesis:
+			Minor = L"Health Knee Prosthesis";
+			break;
+		case BluetoothMinorClass::HealthMedicationMonitor:
+			Minor = L"Health Medication Monitor";
+			break;
+		case BluetoothMinorClass::HealthPeakFlowMonitor:
+			Minor = L"Health Peak Flow Monitor";
+			break;
+		case BluetoothMinorClass::HealthPersonalMobilityDevice:
+			Minor = L"Health Personal Mobility Device";
+			break;
+		case BluetoothMinorClass::HealthPulseOximeter:
+			Minor = L"Health Pulse Oximeter";
+			break;
+		case BluetoothMinorClass::HealthStepCounter:
+			Minor = L"Health Step Counter";
+			break;
+		case BluetoothMinorClass::HealthThermometer:
+			Minor = L"Health Thermometer";
+			break;
+		case BluetoothMinorClass::HealthWeighingScale:
+			Minor = L"Health Weighing Scale";
+			break;
+		case BluetoothMinorClass::Uncategorized:
+			Minor = L"Uncategorized";
+			break;
+		default:
+			Minor = L"Unknown";
+			break;
+		}
+		break;
+	default:
+		Major = L"Unknown";
+		Minor = L"Unknown";
+		break;
+	}
+	return { Major, Minor };
+}
+
+/**
+ * Returns the BluetoothLE categories based on the appearance category and subcategory.
+ *
+ * @param Category The appearance category of the BLE device.
+ * @param SubCategory The appearance subcategory of the BLE device.
+ * @return A tuple containing the major and minor category strings.
+ */
+std::tuple<std::wstring, std::wstring> findBLECategory(uint16_t Category, uint16_t SubCategory)
+{
+	std::wstring Major = L"Unknown";
+	std::wstring Minor = L"Unknown";
+
+	if (Category == BluetoothLEAppearanceCategories::Uncategorized()) {
+		Major = L"Unknown";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Phone()) {
+		Major = L"Phone";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Computer()) {
+		Major = L"Computer";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Watch()) {
+		Major = L"Watch";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Clock()) {
+		Major = L"Clock";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Display()) {
+		Major = L"Display";
+	}
+	if (Category == BluetoothLEAppearanceCategories::RemoteControl()) {
+		Major = L"RemoteControl";
+	}
+	if (Category == BluetoothLEAppearanceCategories::EyeGlasses()) {
+		Major = L"EyeGlasses";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Tag()) {
+		Major = L"Tag";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Keyring()) {
+		Major = L"Keyring";
+	}
+	if (Category == BluetoothLEAppearanceCategories::MediaPlayer()) {
+		Major = L"MediaPlayer";
+	}
+	if (Category == BluetoothLEAppearanceCategories::BarcodeScanner()) {
+		Major = L"BarcodeScanner";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Thermometer()) {
+		Major = L"Thermometer";
+	}
+	if (Category == BluetoothLEAppearanceCategories::HeartRate()) {
+		if (SubCategory == BluetoothLEAppearanceSubcategories::HeartRateBelt()) {
+			Minor = L"HeartRateBelt";
+		}
+		Major = L"HeartRate";
+	}
+	if (Category == BluetoothLEAppearanceCategories::BloodPressure()) {
+		if (SubCategory == BluetoothLEAppearanceSubcategories::BloodPressureArm()) {
+			Minor = L"BloodPressureArm";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::BloodPressureWrist()) {
+			Minor = L"BloodPressureWrist";
+		}
+		Major = L"BloodPressure";
+	}
+	if (Category == BluetoothLEAppearanceCategories::HumanInterfaceDevice()) {
+		if (SubCategory == BluetoothLEAppearanceSubcategories::BarcodeScanner()) {
+			Minor = L"BarcodeScanner";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::CardReader()) {
+			Minor = L"CardReader";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::DigitalPen()) {
+			Minor = L"DigitalPen";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::DigitizerTablet()) {
+			Minor = L"DigitizerTablet";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::Gamepad()) {
+			Minor = L"Gamepad";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::Joystick()) {
+			Minor = L"Joystick";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::Keyboard()) {
+			Minor = L"Keyboard";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::Mouse()) {
+			Minor = L"Mouse";
+		}
+		Major = L"HumanInterfaceDevice";
+	}
+	if (Category == BluetoothLEAppearanceCategories::GlucoseMeter()) {
+		Major = L"GlucoseMeter";
+	}
+	if (Category == BluetoothLEAppearanceCategories::RunningWalking()) {
+		if (SubCategory == BluetoothLEAppearanceSubcategories::RunningWalkingInShoe()) {
+			Minor = L"RunningWalkingInShoe";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::RunningWalkingOnHip()) {
+			Minor = L"RunningWalkingOnHip";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::RunningWalkingOnShoe()) {
+			Minor = L"RunningWalkingOnShoe";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::SportsWatch()) {
+			Minor = L"SportsWatch";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::ThermometerEar()) {
+			Minor = L"ThermometerEar";
+		}
+		Major = L"RunningWalking";
+	}
+	if (Category == BluetoothLEAppearanceCategories::Cycling()) {
+		if (SubCategory == BluetoothLEAppearanceSubcategories::CyclingCadenceSensor()) {
+			Minor = L"CyclingCadenceSensor";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::CyclingComputer()) {
+			Minor = L"CyclingComputer";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::CyclingPowerSensor()) {
+			Minor = L"CyclingPowerSensor";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::CyclingSpeedCadenceSensor()) {
+			Minor = L"CyclingSpeedCadenceSensor";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::CyclingSpeedSensor()) {
+			Minor = L"CyclingSpeedSensor";
+		}
+		Major = L"Cycling";
+	}
+	if (Category == BluetoothLEAppearanceCategories::PulseOximeter()) {
+		if (SubCategory == BluetoothLEAppearanceSubcategories::OximeterFingertip()) {
+			Minor = L"OximeterFingertip";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::OximeterWristWorn()) {
+			Minor = L"OximeterWristWorn";
+		}
+		Major = L"PulseOximeter";
+	}
+	if (Category == BluetoothLEAppearanceCategories::WeightScale()) {
+		Major = L"WeightScale";
+	}
+	if (Category == BluetoothLEAppearanceCategories::OutdoorSportActivity()) {
+		if (SubCategory == BluetoothLEAppearanceSubcategories::LocationDisplay()) {
+			Minor = L"LocationDisplay";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::LocationNavigationDisplay()) {
+			Minor = L"LocationNavigationDisplay";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::LocationNavigationPod()) {
+			Minor = L"LocationNavigationPod";
+		}
+		else if (SubCategory == BluetoothLEAppearanceSubcategories::LocationPod()) {
+			Minor = L"LocationPod";
+		}
+		Major = L"OutdoorSportActivity";
+	}
+
+	return { Major, Minor };
+}
+
+/**
+ * Fetches the battery level of a Bluetooth LE device.
+ *
+ * @param device The BluetoothLEDevice object representing the device.
+ * @return A tuple containing a boolean indicating if the battery level was successfully fetched and an int8_t representing the battery level.
+ */
+std::tuple<bool, int8_t> fetchBatteryLevel(BluetoothLEDevice device) {
+	GattDeviceServicesResult result = device.GetGattServicesAsync(BluetoothCacheMode::Uncached).get();
+	if (result.Status() == GattCommunicationStatus::Success)
+	{
+		IVectorView<GattDeviceService> services = result.Services();
+		for (GattDeviceService service : services)
+		{
+			auto uuid = service.Uuid();
+
+			if (uuid == GattServiceUuids::Battery())
+			{
+				GattCharacteristicsResult characteristics = service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached).get();
+				if (characteristics.Status() == GattCommunicationStatus::Success)
+				{
+					IVectorView<GattCharacteristic> chars = characteristics.Characteristics();
+					for (GattCharacteristic chr : chars)
+					{
+						auto uuid = chr.Uuid();
+
+						GattReadResult readRes = chr.ReadValueAsync(BluetoothCacheMode::Uncached).get();
+
+						if (readRes.Status() == GattCommunicationStatus::Success)
+						{
+							DataReader reader = DataReader::FromBuffer(readRes.Value());
+							try
+							{
+								uint8_t battery = reader.ReadByte();
+								return { true, battery };
+							}
+							catch (...) {}
+						}
+					}
+				}
+			}
+		}
+	}
+	return { false, 0 };
+}
+
+
+/**
+ * Saves the thumbnail of a device in a specified folder.
+ *
+ * @param deviceId The ID of the device.
+ * @param folderPath The path of the folder where the thumbnail will be saved.
+ */
+void saveThumbnailInFolder(Measure* measure, winrt::hstring deviceId) {
+	auto device = DeviceInformation::CreateFromIdAsync(deviceId).get();
+	auto thumbnail = device.GetThumbnailAsync().get();
+
+	uint32_t thumbnailSize = static_cast<uint32_t>(thumbnail.Size());
+	auto buffer = winrt::Windows::Storage::Streams::Buffer(thumbnailSize);
+	thumbnail.ReadAsync(buffer, thumbnailSize, InputStreamOptions::None).get();
+
+	std::filesystem::path currentPath = std::filesystem::current_path();
+	std::wstring fileName = trim(device.Name().c_str());
+	fileName += L"_thumbnail.jpg";
+	std::filesystem::path filePath = std::filesystem::path(measure->thumbnailsFolder) / fileName;
+
+	std::ofstream file(filePath, std::ios::binary);
+	if (file.is_open()) {
+		auto reader = DataReader::FromBuffer(buffer);
+		std::vector<uint8_t> data(reader.UnconsumedBufferLength());
+		reader.ReadBytes(data);
+		file.write(reinterpret_cast<const char*>(data.data()), data.size());
+		file.close();
+		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Thumbnail saved: %s", filePath.c_str());
+	}
+	else {
+		RmLogF(measure->rm, LOG_ERROR, L"[Bluetooth-Plugin] Error saving thumbnail: check if the path is correct and the folder exists.");
+	}
+}
+
+/**
+ * Lists all Bluetooth devices and Bluetooth LE devices.
+ *
+ * @param measure The Measure object.
+ * @return A map of known Bluetooth device addresses to DeviceInfo objects.
+ */
+std::unordered_map<uint64_t, DeviceInfo> listBluetoothDevices(Measure* measure) {
+	init_apartment();
+
+	deviceMap.clear();
+
+	// Find all Bluetooth devices
+	hstring selector = BluetoothDevice::GetDeviceSelector();
+	auto devices = DeviceInformation::FindAllAsync(selector).get();
+
+	for (const auto& device : devices) {
+		auto bluetoothDevice = BluetoothDevice::FromIdAsync(device.Id()).get();
+		uint64_t address = bluetoothDevice.BluetoothAddress();
+
+		std::wstring name = device.Name().c_str();
+		name = trim(name); // Remove leading and trailing whitespace
+
+		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Found Bluetooth device: %s", name.c_str());
+
+		// Check if the device is already in the map
+		if (deviceMap.find(address) == deviceMap.end()) {
+			// Device not found, add it to the map
+			DeviceInfo info;
+			info.name = name.c_str();
+			info.address = address;
+			info.id = bluetoothDevice.BluetoothDeviceId().Id().c_str();
+			info.connected = bluetoothDevice.ConnectionStatus() == BluetoothConnectionStatus::Connected;
+			info.paired = bluetoothDevice.DeviceInformation().Pairing().IsPaired();
+			info.canPair = bluetoothDevice.DeviceInformation().Pairing().CanPair();
+			auto [major, minor] = findBLCategory(bluetoothDevice.ClassOfDevice().MajorClass(), bluetoothDevice.ClassOfDevice().MinorClass());
+			info.majorCategory = major;
+			info.minorCategory = minor;
+			info.hasBatteryLevel = false;
+			info.battery = 0;
+			info.isBluetoothLE = false;
+			deviceMap[address] = info;
+		}
+
+		if (measure->thumbnailsFolder != L"") {
+			saveThumbnailInFolder(measure, device.Id());
+		}
+	}
+
+	// Find all Bluetooth LE devices
+	hstring LEselector = BluetoothLEDevice::GetDeviceSelector();
+	auto LEdevices = DeviceInformation::FindAllAsync(LEselector).get();
+
+	for (const auto& device : LEdevices) {
+		auto bluetoothLEDevice = BluetoothLEDevice::FromIdAsync(device.Id()).get();
+		uint64_t address = bluetoothLEDevice.BluetoothAddress();
+
+		// Update the line where the device name is assigned to remove leading and trailing whitespace
+		std::wstring name = device.Name().c_str();
+		name = trim(name); // Remove leading and trailing whitespace
+		bool connected = bluetoothLEDevice.ConnectionStatus() == BluetoothConnectionStatus::Connected;
+
+		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Found BluetoothLE device: %s", name.c_str());
+
+		// Check if the device is already in the map
+		if (deviceMap.find(address) == deviceMap.end()) {
+			// Device not found, add it to the map
+			DeviceInfo info;
+			info.name = name.c_str();
+			info.address = address;
+			info.id = bluetoothLEDevice.BluetoothDeviceId().Id().c_str();
+			info.connected = connected;
+			info.paired = bluetoothLEDevice.DeviceInformation().Pairing().IsPaired();
+			info.canPair = bluetoothLEDevice.DeviceInformation().Pairing().CanPair();
+			auto [major, minor] = findBLECategory(bluetoothLEDevice.Appearance().Category(), bluetoothLEDevice.Appearance().SubCategory());
+			info.majorCategory = major;
+			info.minorCategory = minor;
+			if (connected) {
+				auto [hasBatteryLevel, battery] = fetchBatteryLevel(bluetoothLEDevice);
+				info.hasBatteryLevel = hasBatteryLevel;
+				info.battery = battery;
+			}
+			else {
+				info.hasBatteryLevel = false;
+				info.battery = 0;
+			}
+			info.isBluetoothLE = true;
+			deviceMap[address] = info;
+		}
+		else {
+			// Device found, update the battery level if available
+			auto& info = deviceMap[address];
+			bool connected = bluetoothLEDevice.ConnectionStatus() == BluetoothConnectionStatus::Connected;
+			if (connected) {
+				auto [hasBatteryLevel, battery] = fetchBatteryLevel(bluetoothLEDevice);
+				info.hasBatteryLevel = hasBatteryLevel;
+				info.battery = battery;
+			}
+			else {
+				info.hasBatteryLevel = false;
+				info.battery = 0;
+			}
+			info.isBluetoothLE = true;
+		}
+
+		if (measure->thumbnailsFolder != L"") {
+			saveThumbnailInFolder(measure, device.Id());
+		}
+	}
+
+	return deviceMap;
+}
+
+/**
+ * Updates the Bluetooth devices list.
+ *
+ * @param measure A pointer to the Measure object.
+ */
+void updateDevices(Measure* measure) {
+	updateThread = std::thread([measure]() {
+		std::lock_guard<std::mutex> lock(bluetoothOperationMutex);
+
+		auto status = getBluetoothStatus();
+		if (status == L"0") {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Cannot update devices if Bluetooth is disabled");
+			return;
+		}
+
+		auto devicesMap = listBluetoothDevices(measure);
+		std::wstringstream devicesStream;
+		std::wstringstream fileStream;
+		for (const auto& pair : devicesMap) {
+			const DeviceInfo& device = pair.second;
+			devicesStream << device.name << L"|"
+				<< device.address << L"|"
+				<< device.id << L"|"
+				<< device.connected << L"|"
+				<< device.paired << L"|"
+				<< device.canPair << L"|"
+				<< device.majorCategory << L"|"
+				<< device.minorCategory << L"|"
+				<< device.hasBatteryLevel << L"|"
+				<< static_cast<int>(device.battery) << L"|"
+				<< device.isBluetoothLE << L";";
+			fileStream << device.name << L"|"
+				<< device.address << L"|"
+				<< device.id << L"|"
+				<< device.connected << L"|"
+				<< device.paired << L"|"
+				<< device.canPair << L"|"
+				<< device.majorCategory << L"|"
+				<< device.minorCategory << L"|"
+				<< device.hasBatteryLevel << L"|"
+				<< static_cast<int>(device.battery) << L"|"
+				<< device.isBluetoothLE << L";\n";
+		}
+
+		availableDevices = devicesStream.str(); // Set the availableDevices string to the formatted string
+
+		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updated devices");
+		RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Available Devices: %s", availableDevices.c_str());
+
+		// Write to file if the "OutputPath" field is populated
+		if (measure->outputFile != L"") {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Writing to file");
+			std::wofstream outputFile(measure->outputFile, std::wofstream::trunc);
+			outputFile << fileStream.str();
+			outputFile.close();
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] File written");
+		}
+
+		// Update variable of the skin if the "DevicesVariable" and "VariablesFiles" fields are populated
+		/*if (measure->devicesVariable != L"" && measure->variablesFile != L"") {
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] Updating DevicesVariable");
+			wstring setVariableBang = L"[!SetVariable " + measure->devicesVariable + L" \"" + availableDevices.c_str() + L"\"]";
+			RmExecute(measure->skin, setVariableBang.c_str());
+			wstring writeVariableBang = L"[!WriteKeyValue Variables " + measure->devicesVariable + L" \"" + availableDevices.c_str() + L"\" \"" + measure->variablesFile + L"\"]";
+			RmExecute(measure->skin, writeVariableBang.c_str());
+			RmLogF(measure->rm, LOG_DEBUG, L"[Bluetooth-Plugin] DevicesVariable updated");
+		}*/
+		});
+
+	updateThread.detach();
 }
 
 #pragma endregion

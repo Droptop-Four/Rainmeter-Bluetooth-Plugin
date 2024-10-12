@@ -14,9 +14,10 @@ Measure::~Measure() {
 void Measure::Initialize() {
 	pluginType = RmReadInt(rm, L"Type", 0);
 	updateAction = RmReadString(rm, L"UpdateAction", L"", FALSE);
-	outputPath = RmReadString(rm, L"OutputPath", L"", FALSE);
-	devicesVariable = RmReadString(rm, L"DevicesVariable", L"", FALSE);
-	variablesFile = RmReadString(rm, L"VariablesFile", L"", FALSE);
+	outputFile = RmReadString(rm, L"OutputFile", L"", FALSE);
+	thumbnailsFolder = RmReadString(rm, L"ThumbnailsFolder", L"", FALSE);
+	//devicesVariable = RmReadString(rm, L"DevicesVariable", L"", FALSE);
+	//variablesFile = RmReadString(rm, L"VariablesFile", L"", FALSE);
 }
 
 void Measure::Execute(LPCWSTR bang) {
