@@ -50,6 +50,10 @@ Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 
 Toggles the Bluetooth adapter.
 
+{% hint style="warning" %}
+Available if the [#type](options.md#type "mention") is set to `1` or `0`.
+{% endhint %}
+
 {% code title="Example Bang" %}
 ```ini
 [!CommandMeasure "BluetoothMeasure" "ToggleBluetooth"]
