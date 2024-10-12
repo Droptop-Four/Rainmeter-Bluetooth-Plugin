@@ -17,7 +17,7 @@ Returns the list of devices in a formatted string.
 
 Every device is separated by `;`, and evey item of a device is separated by `|`.
 
-It's useful for example to be used in a lua script as in the [example skin](https://github.com/66Bunz/Rainmeter-Bluetooth-Plugin/tree/main/Bluetooth-Example-Skin).
+It's useful for example to be used in a lua script as in the [example skin](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/tree/main/Bluetooth-Example-Skin).
 
 ### Device Properties
 
