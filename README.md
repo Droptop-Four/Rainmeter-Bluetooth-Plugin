@@ -1,5 +1,6 @@
 # Bluetooth Plugin for Rainmeter
 
+> [!WARNING]
 > This plugin is still a WIP (Work In Progress) and it doesn't include all the features that could be useful to have. If you want to see planned features, please check the [Features](#features) section. If you want to help, please check the [Contributing](#contributing) section.
 
 ## Installation
@@ -18,7 +19,8 @@ Head over to [https://droptop.gitbook.io/rainmeter-bluetooth-plugin](https://dro
 
 ## Basic Usage
 
-> **NOTE:** Since this plugin is still a WIP, the usage is subject to change.
+> [!NOTE]
+> Since this plugin is still a WIP, the usage is subject to change.
 
 The plugin at every update, is going to scan for Bluetooth devices, and update the list of available devices. The plugin is going to store the list of devices in a formatted string, that can be accessed using the `AvailableDevices()` function.
 
