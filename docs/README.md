@@ -10,7 +10,7 @@ Download the latest example rmskin from the [releases](https://github.com/Dropto
 
 Else, you can download the zip package from the latest [release](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/releases) and extract the dll that corresponds to the Windows architecture you are using (x32 or x64) to `%appdata%\Rainmeter\Plugins`.
 
-### Requirtements
+### Minimum requirements
 
 * Windows 10
 
