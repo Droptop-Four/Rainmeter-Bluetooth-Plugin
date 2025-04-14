@@ -21,10 +21,10 @@
 //
 
 /// <summary>
-/// Retrieves the option defined in the skin file
+/// Retrieves an option of the plugin script measure
 /// </summary>
 /// <param name="rm">Pointer to the plugin measure</param>
-/// <param name="option">Option name to be read from skin</param>
+/// <param name="option">Option name</param>
 /// <param name="defValue">Default value for the option if it is not found or invalid</param>
 /// <param name="replaceMeasures">If true, replaces section variables in the returned string</param>
 /// <returns>Returns the option value as a string (LPCWSTR)</returns>
@@ -33,21 +33,50 @@
 /// PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue)
 /// {
 /// 	LPCWSTR value = RmReadString(rm, L"Value", L"DefaultValue");
-/// 	LPCWSTR action = RmReadString(rm, L"Action", L"", FALSE);  // [MeasureNames] will be parsed/replaced when the action is executed with RmExecute
 /// }
 /// </code>
 /// </example>
-#ifdef __cplusplus
 LIBRARY_EXPORT LPCWSTR __stdcall RmReadString(void* rm, LPCWSTR option, LPCWSTR defValue, BOOL replaceMeasures = TRUE);
-#else
-LIBRARY_EXPORT LPCWSTR __stdcall RmReadString(void* rm, LPCWSTR option, LPCWSTR defValue, BOOL replaceMeasures);
-#endif // __cplusplus
 
 /// <summary>
-/// Parses any formulas in the option (use RmReadDouble/RmReadInt instead)
+/// Retrieves an option of a meter/measure
+/// </summary>
+/// <remarks>In older Rainmeter versions without support for this API, always returns the default value</remarks>
+/// <param name="rm">Pointer to the plugin measure</param>
+/// <param name="section">Meter/measure section name</param>
+/// <param name="option">Option name</param>
+/// <param name="defValue">Default value for the option if it is not found or invalid</param>
+/// <param name="replaceMeasures">If true, replaces section variables in the returned string</param>
+/// <returns>Returns the option value as a string (LPCWSTR)</returns>
+/// <example>
+/// <code>
+/// PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue)
+/// {
+/// 	LPCWSTR value = RmReadStringFromSection(rm, L"MySection", L"Value", L"DefaultValue");
+/// }
+/// </code>
+/// </example>
+#ifdef LIBRARY_EXPORTS
+LIBRARY_EXPORT LPCWSTR __stdcall RmReadStringFromSection(void* rm, LPCWSTR section, LPCWSTR option, LPCWSTR defValue, BOOL replaceMeasures = TRUE);
+#else
+inline LPCWSTR RmReadStringFromSection(void* rm, LPCWSTR section, LPCWSTR option, LPCWSTR defValue, BOOL replaceMeasures = TRUE)
+{
+	typedef LPCWSTR(__stdcall* RmReadStringFromSectionFunc)(void*, LPCWSTR, LPCWSTR, LPCWSTR, BOOL);
+	static auto delayedFunc = (RmReadStringFromSectionFunc)GetProcAddress(GetModuleHandle(L"Rainmeter.dll"), "RmReadStringFromSection");
+	if (delayedFunc)
+	{
+		return delayedFunc(rm, section, option, defValue, replaceMeasures);
+	}
+
+	return defValue;
+}
+#endif
+
+/// <summary>
+/// Retrieves an option of the plugin script measure as a number after parsing possible formula
 /// </summary>
 /// <param name="rm">Pointer to the plugin measure</param>
-/// <param name="option">Option name to be read from skin</param>
+/// <param name="option">Option name</param>
 /// <param name="defValue">Default value for the option if it is not found, invalid, or a formula could not be parsed</param>
 /// <returns>Returns the option value as an double</returns>
 /// <example>
@@ -59,6 +88,83 @@ LIBRARY_EXPORT LPCWSTR __stdcall RmReadString(void* rm, LPCWSTR option, LPCWSTR 
 /// </code>
 /// </example>
 LIBRARY_EXPORT double __stdcall RmReadFormula(void* rm, LPCWSTR option, double defValue);
+
+/// <summary>
+/// Retrieves an option of a meter/measure as a number after parsing possible formula
+/// </summary>
+/// <remarks>In older Rainmeter versions without support for this API, always returns the default value</remarks>
+/// <param name="rm">Pointer to the plugin measure</param>
+/// <param name="section">Meter/measure section name</param>
+/// <param name="option">Option name</param>
+/// <param name="defValue">Default value for the option if it is not found, invalid, or a formula could not be parsed</param>
+/// <returns>Returns the option value as an double</returns>
+/// <example>
+/// <code>
+/// PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue)
+/// {
+/// 	double value = RmReadFormulaFromSection(rm, L"MySection", L"Value", 20);
+/// }
+/// </code>
+/// </example>
+#ifdef LIBRARY_EXPORTS
+LIBRARY_EXPORT double __stdcall RmReadFormulaFromSection(void* rm, LPCWSTR section, LPCWSTR option, double defValue);
+#else
+inline double RmReadFormulaFromSection(void* rm, LPCWSTR section, LPCWSTR option, double defValue)
+{
+	typedef double(__stdcall* RmReadFormulaFromSectionFunc)(void*, LPCWSTR, LPCWSTR, double);
+	static auto delayedFunc = (RmReadFormulaFromSectionFunc)GetProcAddress(GetModuleHandle(L"Rainmeter.dll"), "RmReadFormulaFromSection");
+	if (delayedFunc)
+	{
+		return delayedFunc(rm, section, option, defValue);
+	}
+
+	return defValue;
+}
+#endif
+
+/// <summary>
+/// Retrieves the option defined in a section and converts it to an integer.
+/// </summary>
+/// <remarks>If the option is a formula, the returned value will be the result of the parsed formula.</remarks>
+/// <param name="rm">Pointer to the plugin measure</param>
+/// <param name="section">Meter/measure section name</param>
+/// <param name="option">Option name</param>
+/// <param name="defValue">Default value if the option is not found or invalid</param>
+/// <returns>Returns the option value as an integer</returns>
+/// <example>
+/// <code>
+/// PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue)
+/// {
+///     int value = RmReadIntFromSection(rm, L"Section", L"Option", 20);
+/// }
+/// </code>
+/// </example>
+__inline int RmReadIntFromSection(void* rm, LPCWSTR section, LPCWSTR option, int defValue)
+{
+	return (int)RmReadFormulaFromSection(rm, section, option, defValue);
+}
+
+/// <summary>
+/// Retrieves the option defined in a section and converts it to a double.
+/// </summary>
+/// <remarks>If the option is a formula, the returned value will be the result of the parsed formula.</remarks>
+/// <param name="rm">Pointer to the plugin measure</param>
+/// <param name="section">Meter/measure section name</param>
+/// <param name="option">Option name</param>
+/// <param name="defValue">Default value if the option is not found or invalid</param>
+/// <returns>Returns the option value as a double</returns>
+/// <example>
+/// <code>
+/// PLUGIN_EXPORT void Reload(void* data, void* rm, double* maxValue)
+/// {
+///     double value = RmReadDoubleFromSection(rm, L"Section", L"Option", 20.0);
+/// }
+/// </code>
+/// </example>
+__inline double RmReadDoubleFromSection(void* rm, LPCWSTR section, LPCWSTR option, double defValue)
+{
+	return RmReadFormulaFromSection(rm, section, option, defValue);
+}
 
 /// <summary>
 /// Returns a string, replacing any variables (or section variables) within the inputted string
