@@ -56,7 +56,7 @@ function Refresh()
 end
 ```
 
-For a complete example, check out the [example skin](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/tree/main/Bluetooth-Eample-Skin).
+For a complete example, check out the [example skin](https://github.com/Droptop-Four/Rainmeter-Bluetooth-Plugin/tree/main/BluetoothExampleSkin).
 
 ## Features
 
