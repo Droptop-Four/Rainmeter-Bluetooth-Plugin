@@ -6,10 +6,8 @@
 
 #include <filesystem>
 #include <fstream>
-#include <iostream>
-#include <mutex>
-#include <set>
 #include <sstream>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -18,7 +16,6 @@
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 #include <winrt/Windows.Devices.Bluetooth.h>
 #include <winrt/Windows.Devices.Enumeration.h>
-#include <winrt/Windows.Devices.Power.h>
 #include <winrt/Windows.Devices.Radios.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Foundation.h>
@@ -31,7 +28,6 @@ using namespace winrt;
 using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
 using namespace Windows::Devices::Bluetooth;
 using namespace Windows::Devices::Enumeration;
-using namespace Windows::Devices::Power;
 using namespace Windows::Devices::Radios;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Foundation;

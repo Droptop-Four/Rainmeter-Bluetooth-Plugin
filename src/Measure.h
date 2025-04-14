@@ -9,7 +9,7 @@ public:
 	void* rm;
 	void* skin;
 
-	int pluginType;
+	int pluginRole;
 	std::wstring updateAction;
 	std::wstring outputFile;
 	std::wstring thumbnailsFolder;

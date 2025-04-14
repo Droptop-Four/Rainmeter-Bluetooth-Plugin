@@ -1,3 +1,14 @@
+--[[
+    Example.lua
+    Rainmeter Bluetooth Plugin Example Script
+
+    Author: Droptop Four - Bunz
+    Version: 0.1.0.8
+    Date: 2025
+    Description: Example script to demonstrate the use of the Bluetooth plugin for Rainmeter.
+    License: GNU GENERAL PUBLIC LICENSE 3.0
+--]]
+
 function Initialize()
     _Populate(1, 2)
 

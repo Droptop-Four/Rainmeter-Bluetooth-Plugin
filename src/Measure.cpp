@@ -5,14 +5,12 @@ using namespace std;
 
 Measure::Measure(void* _rm) :
 	rm(_rm),
-	skin(RmGetSkin(_rm)) {
-}
+	skin(RmGetSkin(_rm)) {}
 
-Measure::~Measure() {
-}
+Measure::~Measure() {}
 
 void Measure::Initialize() {
-	pluginType = RmReadInt(rm, L"Type", 0);
+	pluginRole = RmReadInt(rm, L"Role", 0);
 	updateAction = RmReadString(rm, L"UpdateAction", L"", FALSE);
 	outputFile = RmReadString(rm, L"OutputFile", L"", FALSE);
 	thumbnailsFolder = RmReadString(rm, L"ThumbnailsFolder", L"", FALSE);

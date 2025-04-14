@@ -9,7 +9,7 @@ description: Possible Bangs that can be used
 Manually updates the status of the Bluetooth adapter. The status can be retrieved with [#and-bluetoothmeasure-bluetoothstatus](section-variables.md#and-bluetoothmeasure-bluetoothstatus "mention").
 
 {% hint style="warning" %}
-Available if the [#type](options.md#type "mention") is set to `1` or `0`.
+Available if the [#role](options.md#role "mention") is set to `1` or `0`.
 {% endhint %}
 
 {% code title="Example Bang" %}
@@ -23,7 +23,7 @@ Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 Disables the Bluetooth adapter.
 
 {% hint style="warning" %}
-Available if the [#type](options.md#type "mention") is set to `1` or `0`.
+Available if the [#role](options.md#role "mention") is set to `1` or `0`.
 {% endhint %}
 
 {% code title="Example Bang" %}
@@ -37,7 +37,7 @@ Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 Enables the Bluetooth adapter.
 
 {% hint style="warning" %}
-Available if the [#type](options.md#type "mention") is set to `1` or `0`.
+Available if the [#role](options.md#role "mention") is set to `1` or `0`.
 {% endhint %}
 
 {% code title="Example Bang" %}
@@ -51,7 +51,7 @@ Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 Toggles the Bluetooth adapter.
 
 {% hint style="warning" %}
-Available if the [#type](options.md#type "mention") is set to `1` or `0`.
+Available if the [#role](options.md#role "mention") is set to `1` or `0`.
 {% endhint %}
 
 {% code title="Example Bang" %}
@@ -65,7 +65,7 @@ Available if the [#type](options.md#type "mention") is set to `1` or `0`.
 Manually starts the update of devices that are stored inside the plugin. They can be retrieved with [#and-bluetoothmeasure-availabledevices](section-variables.md#and-bluetoothmeasure-availabledevices "mention").
 
 {% hint style="warning" %}
-Available if the [#type](options.md#type "mention") is set to `2` or `0`.
+Available if the [#role](options.md#role "mention") is set to `2` or `0`.
 {% endhint %}
 
 {% code title="Example Bang" %}

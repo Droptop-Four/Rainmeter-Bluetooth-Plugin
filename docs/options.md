@@ -4,14 +4,14 @@ description: Possible options that can be used in the plugin measure
 
 # Options
 
-## Type
+## Role
 
-The type of operations the plugin will perform when its measure is updated.
+The Role of operations the plugin will perform when its measure is updated.
 
 {% tabs %}
-{% tab title="Type=0" %}
+{% tab title="Role=0" %}
 {% hint style="info" %}
-This is the DEFAULT `Type`
+This is the DEFAULT `Role`
 {% endhint %}
 
 **Description:** `Get/Update the Bluetooth status and Bluetooth devices`
@@ -27,7 +27,7 @@ This is the DEFAULT `Type`
 * [#updatedevices](bangs.md#updatedevices "mention")
 {% endtab %}
 
-{% tab title="Type=1" %}
+{% tab title="Role=1" %}
 **Description:** `Get/Update the Bluetooth status.`
 
 **Plugin Measure:** `Returns the Bluetooth Status`
@@ -40,7 +40,7 @@ This is the DEFAULT `Type`
 * [#updatebluetoothstatus](bangs.md#updatebluetoothstatus "mention")
 {% endtab %}
 
-{% tab title="Type=2" %}
+{% tab title="Role=2" %}
 **Description:** `Get/Update the Bluetooth devices`
 
 **Plugin Measure:** `Returns 0`
@@ -56,7 +56,7 @@ This is the DEFAULT `Type`
 [BluetoothMeasure]
 Measure=Plugin
 Plugin=Bluetooth
-Type=[0/1/2]
+Role=[0/1/2]
 ```
 {% endcode %}
 
