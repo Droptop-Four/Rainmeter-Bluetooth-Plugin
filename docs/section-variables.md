@@ -67,7 +67,7 @@ If the plugin was able to obtain the battery level of the device.
 
 #### Battery
 
-The percentage of the battery of the device if present.
+The percentage of the battery of the device if present. It's possible that some devices' battery is not displayed
 
 #### Is BLE
 
