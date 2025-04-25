@@ -87,7 +87,7 @@ Those are the returned properties for every device:
 - [x] Major Category
 - [x] Minor Category
 - [x] Has Battery Level
-- [x] Battery
+- [x] Battery (it's possible that some devices' battery is not displayed)
 - [x] Is Bluetooth LE
 - [ ] Signal strength
 
